@@ -151,7 +151,18 @@ export const RealTradingProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const connectToAPIs = async (credentials: TradingCredentials): Promise<{ success: boolean; error?: string }> => {
     try {
       realTradingAPI.setCredentials(credentials);
-      // Esperar validación real
+      // Si el modo simulado está activado, permitir acceso sin validar claves
+      const paperMode = localStorage.getItem('paperTradingEnabled') === 'true';
+      if (paperMode) {
+        setIsConnected(true);
+        setIsAutoTradingActive(false);
+        localStorage.setItem('isAutoTradingActive', 'false');
+        await refreshAccountBalance();
+        await refreshMarketData();
+        await loadTradeHistory();
+        return { success: true };
+      }
+      // Si no es modo simulado, validar conexión real
       const result = await realTradingAPI.validateConnectionWithError();
       setIsConnected(result.success);
       if (result.success) {

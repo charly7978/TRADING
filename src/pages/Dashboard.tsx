@@ -1,4 +1,5 @@
 import { useRealTradingContext } from '../context/RealTradingContext';
+import AIChat from '../components/AIChat';
 import {
   TrendingUp,
   TrendingDown,
@@ -63,6 +64,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen p-6 space-y-6">
+      <AIChat />
       <div className="max-w-7xl mx-auto">
         {/* Header con saludo personalizado */}
         <div className="mb-8">

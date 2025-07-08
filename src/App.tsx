@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navigation from './components/Navigation';
+import AIChat from './components/AIChat';
 import RealDashboard from './pages/RealDashboard';
 import AutoTrading from './pages/AutoTrading';
 import Portfolio from './pages/Portfolio';
@@ -48,6 +49,7 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       <RealTradingProvider>
         <AppRoutes />
+        <AIChat />
       </RealTradingProvider>
     </div>
   );

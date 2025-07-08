@@ -61,16 +61,22 @@ const TradingSetup = () => {
   }, [paperMode]);
 
   // Automatización máxima: conectar siempre que haya credenciales válidas, tanto al montar como al cambiar
+
   useEffect(() => {
     setConnectionError('');
     setSuccess(false);
     const hasBinance = credentials.binanceApiKey && credentials.binanceSecretKey;
     const hasAlpaca = credentials.alpacaApiKey && credentials.alpacaSecretKey;
+    // Si hay claves, conectar automáticamente
     if (hasBinance || hasAlpaca) {
       handleConnect();
     }
+    // Si está en modo simulado y no hay claves, permitir conectar demo
+    if (paperMode && !hasBinance && !hasAlpaca) {
+      handleConnect();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [credentials.binanceApiKey, credentials.binanceSecretKey, credentials.alpacaApiKey, credentials.alpacaSecretKey]);
+  }, [credentials.binanceApiKey, credentials.binanceSecretKey, credentials.alpacaApiKey, credentials.alpacaSecretKey, paperMode]);
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -152,12 +158,23 @@ const TradingSetup = () => {
                 </div>
               </div>
 
-              <button
-                onClick={() => window.location.href = '/dashboard'}
-                className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all"
-              >
-                Ir al Dashboard
-              </button>
+          <button
+            onClick={() => window.location.href = '/dashboard'}
+            className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all"
+          >
+            Ir al Dashboard
+          </button>
+          {paperMode && (
+            <div className="mt-8 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+              <h2 className="text-xl font-bold text-yellow-700 mb-2">¡Bienvenido al modo Simulado!</h2>
+              <p className="text-gray-700 mb-2">La inteligencia artificial está lista para guiarte. Recibirás recomendaciones, alertas y podrás practicar inversiones sin riesgo.</p>
+              <ul className="list-disc list-inside text-sm text-gray-600">
+                <li>Prueba el dashboard y explora las recomendaciones de IA.</li>
+                <li>Simula compras y ventas, revisa tu portafolio y aprende sin miedo a perder dinero.</li>
+                <li>La IA te dará consejos y feedback en tiempo real.</li>
+              </ul>
+            </div>
+          )}
             </div>
           </div>
         </div>
@@ -267,7 +284,7 @@ const TradingSetup = () => {
               <span className="text-green-700 font-medium">¡Conexión exitosa!</span>
             </div>
           )}
-          {connectionError && (
+          {connectionError && !paperMode && (
             <div className="flex flex-col items-center justify-center mb-6">
               <AlertTriangle className="h-6 w-6 text-yellow-600 mr-2" />
               <span className="text-yellow-700 font-medium text-center">{connectionError}</span>
@@ -279,6 +296,12 @@ const TradingSetup = () => {
                 <li>5. Si usas Alpaca, comienza con "Paper Trading" para evitar bloqueos.</li>
                 <li>6. Si usas Bybit, sigue los pasos de la sección morada para obtener tu API Key.</li>
               </ul>
+            </div>
+          )}
+          {connectionError && paperMode && (
+            <div className="flex flex-col items-center justify-center mb-6">
+              <AlertTriangle className="h-6 w-6 text-yellow-600 mr-2" />
+              <span className="text-yellow-700 font-medium text-center">Modo simulado: puedes practicar aunque no haya conexión real.</span>
             </div>
           )}
 

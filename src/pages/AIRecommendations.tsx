@@ -80,7 +80,34 @@ const AIRecommendations = () => {
     }
   };
 
+
   if (!isConnected) {
+    // Permitir modo demo si está activado
+    const paperMode = localStorage.getItem('paperTradingEnabled') === 'true';
+    if (paperMode) {
+      return (
+        <div className="min-h-screen p-6 flex items-center justify-center bg-gradient-to-br from-yellow-50 to-blue-50">
+          <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-8 border border-yellow-200">
+            <Brain className="h-16 w-16 text-yellow-500 mx-auto mb-4 animate-bounce" />
+            <h2 className="text-3xl font-bold text-yellow-800 mb-2 text-center">¡Bienvenido al modo Simulado!</h2>
+            <p className="text-gray-700 mb-4 text-center">
+              Soy tu asistente de inversión inteligente. Analizaré el mercado, te explicaré cada recomendación y te guiaré paso a paso para que aprendas a invertir como un profesional, sin riesgo real.
+            </p>
+            <ul className="list-disc list-inside text-gray-600 mb-6">
+              <li>Recibirás análisis detallados y consejos personalizados.</li>
+              <li>Puedes simular compras y ventas, y ver cómo evoluciona tu portafolio.</li>
+              <li>Haz preguntas, experimenta y aprende con feedback inmediato.</li>
+            </ul>
+            <button
+              onClick={() => window.location.href = '/dashboard'}
+              className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all mt-4"
+            >
+              Ir al Dashboard Simulado
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen p-6 flex items-center justify-center">
         <div className="text-center">
@@ -191,7 +218,6 @@ const AIRecommendations = () => {
                       </div>
                     </div>
                   </div>
-                  
                   <div className="text-right">
                     <div className="flex items-center space-x-1 mb-1">
                       <Brain className="h-4 w-4 text-purple-600" />
@@ -208,6 +234,28 @@ const AIRecommendations = () => {
                   </div>
                 </div>
 
+                {/* Mensaje de IA personalizado */}
+                <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                  <span className="block text-yellow-800 font-semibold mb-1">IA:</span>
+                  <span className="text-gray-700 text-sm">
+                    {rec.action === 'COMPRAR' && rec.riskLevel === 'BAJO' && (
+                      <>Esta es una oportunidad sólida. El mercado muestra señales de fortaleza y bajo riesgo. Considera invertir una parte de tu capital, pero nunca pongas todos tus huevos en la misma canasta.</>
+                    )}
+                    {rec.action === 'COMPRAR' && rec.riskLevel === 'MEDIO' && (
+                      <>La oportunidad es interesante, pero hay cierta volatilidad. Si decides invertir, hazlo con una cantidad moderada y mantén un stop loss disciplinado.</>
+                    )}
+                    {rec.action === 'COMPRAR' && rec.riskLevel === 'ALTO' && (
+                      <>El potencial de ganancia es alto, pero también el riesgo. Solo invierte si aceptas la posibilidad de pérdidas y diversifica tu portafolio.</>
+                    )}
+                    {rec.action === 'VENDER' && (
+                      <>Detecto señales de debilidad en este activo. Considera reducir exposición o tomar ganancias si ya tienes posiciones abiertas.</>
+                    )}
+                    {rec.action === 'MANTENER' && (
+                      <>No hay señales claras para operar en este momento. La paciencia es una virtud en los mercados.</>
+                    )}
+                  </span>
+                </div>
+
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600 text-sm">Precio objetivo:</span>
@@ -215,14 +263,12 @@ const AIRecommendations = () => {
                       ${rec.targetPrice.toLocaleString()}
                     </span>
                   </div>
-                  
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600 text-sm">Stop loss:</span>
                     <span className="font-medium text-gray-900">
                       ${rec.stopLoss.toLocaleString()}
                     </span>
                   </div>
-                  
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600 text-sm">Retorno potencial:</span>
                     <span className="font-medium text-green-600">

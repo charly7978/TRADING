@@ -1,3 +1,25 @@
+// Tipos para compatibilidad con TradingContext y UI demo
+export interface AIRecommendation {
+  symbol: string;
+  action: 'COMPRAR' | 'VENDER' | 'MANTENER';
+  confidence: number;
+  reasoning: string;
+  targetPrice: number;
+  stopLoss: number;
+  potentialReturn: number;
+  riskLevel: 'BAJO' | 'MEDIO' | 'ALTO';
+}
+
+export interface Asset {
+  symbol: string;
+  name: string;
+  price: number;
+  change24h: number;
+  volume: number;
+  type: 'crypto' | 'stock';
+  recommendation: 'COMPRAR' | 'VENDER' | 'MANTENER';
+  aiScore: number;
+}
 // Servicio de trading simulado para demostración
 export interface TradingCredentials {
   apiKey?: string;
@@ -41,11 +63,43 @@ export interface MarketData {
 }
 
 class TradingAPIService {
-  private credentials: TradingCredentials = {};
+  // Compatibilidad con TradingContext: recomendaciones IA demo
+
+  // Demo: recomendaciones IA para compatibilidad con TradingContext/UI
+  async analyzeMarket(symbols: string[]): Promise<AIRecommendation[]> {
+    return symbols.map((symbol, i) => ({
+      symbol,
+      action: i % 3 === 0 ? 'COMPRAR' : i % 3 === 1 ? 'VENDER' : 'MANTENER',
+      confidence: 60 + Math.random() * 40,
+      reasoning: 'Simulación IA demo',
+      targetPrice: 100 + Math.random() * 100,
+      stopLoss: 80 + Math.random() * 50,
+      potentialReturn: Math.random() * 10,
+      riskLevel: ['BAJO', 'MEDIO', 'ALTO'][i % 3] as 'BAJO' | 'MEDIO' | 'ALTO',
+    }));
+  }
+
+  // Compatibilidad con TradingContext: activos demo
+
+  // Demo: activos para compatibilidad con TradingContext/UI
+  async getMarketData(symbols: string[]): Promise<Asset[]> {
+    return symbols.map((symbol, i) => ({
+      symbol,
+      name: symbol,
+      price: 100 + Math.random() * 100,
+      change24h: -5 + Math.random() * 10,
+      volume: 1000 + Math.random() * 10000,
+      type: i % 2 === 0 ? 'crypto' : 'stock',
+      recommendation: ['COMPRAR', 'VENDER', 'MANTENER'][i % 3] as 'COMPRAR' | 'VENDER' | 'MANTENER',
+      aiScore: Math.random() * 100,
+    }));
+  }
+  // private credentials: TradingCredentials = {}; // (not used in demo)
   private connected = false;
 
-  setCredentials(credentials: TradingCredentials) {
-    this.credentials = credentials;
+
+  setCredentials(_: TradingCredentials) {
+    // No-op in demo mode; just mark as connected
     this.connected = true;
   }
 
@@ -53,46 +107,10 @@ class TradingAPIService {
     return this.connected;
   }
 
-  async analyzeMarket(symbols: string[]): Promise<TradingSignal[]> {
-    // Simulación de análisis de mercado
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return symbols.map(symbol => {
-      const confidence = Math.floor(Math.random() * 40) + 60; // 60-100%
-      const actions: ('BUY' | 'SELL' | 'HOLD')[] = ['BUY', 'SELL', 'HOLD'];
-      const action = actions[Math.floor(Math.random() * actions.length)];
-      
-      const basePrice = this.getSimulatedPrice(symbol);
-      const targetPrice = action === 'BUY' ? basePrice * 1.05 : basePrice * 0.95;
-      const stopLoss = action === 'BUY' ? basePrice * 0.98 : basePrice * 1.02;
-      
-      const reasonings = [
-        'Análisis técnico muestra tendencia alcista',
-        'RSI indica sobreventa, buena oportunidad de compra',
-        'Volumen alto con momentum positivo',
-        'Ruptura de resistencia clave',
-        'Patrón de velas japonesas alcista',
-        'Media móvil cruzando al alza',
-        'Divergencia bajista en MACD',
-        'Nivel de soporte fuerte detectado'
-      ];
-      
-      return {
-        symbol,
-        action,
-        confidence,
-        targetPrice,
-        stopLoss,
-        reasoning: reasonings[Math.floor(Math.random() * reasonings.length)]
-      };
-    });
-  }
 
+  // Demo: ejecución de orden simulada
   async executeOrder(order: OrderRequest): Promise<OrderResponse | null> {
-    // Simulación de ejecución de orden
     await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Simular éxito/fallo (95% éxito)
     if (Math.random() < 0.95) {
       return {
         orderId: `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -104,27 +122,13 @@ class TradingAPIService {
         timestamp: new Date()
       };
     }
-    
     return null;
   }
 
-  async getMarketData(symbols: string[]): Promise<MarketData[]> {
-    // Simulación de datos de mercado
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    return symbols.map(symbol => ({
-      symbol,
-      price: this.getSimulatedPrice(symbol),
-      change24h: (Math.random() - 0.5) * 10, // -5% a +5%
-      volume: Math.floor(Math.random() * 1000000) + 100000,
-      type: symbol.includes('USDT') || symbol.includes('BTC') || symbol.includes('ETH') ? 'crypto' as const : 'stock' as const
-    }));
-  }
 
+  // Demo: balance de cuenta simulado
   async getAccountBalance(): Promise<{ [key: string]: number }> {
-    // Simulación de balance de cuenta
     await new Promise(resolve => setTimeout(resolve, 200));
-    
     return {
       USD: 10000 + Math.random() * 5000,
       USDT: 5000 + Math.random() * 2000,
@@ -135,8 +139,8 @@ class TradingAPIService {
     };
   }
 
+
   private getSimulatedPrice(symbol: string): number {
-    // Precios base simulados
     const basePrices: { [key: string]: number } = {
       'BTCUSDT': 45000,
       'BTC': 45000,
@@ -147,17 +151,15 @@ class TradingAPIService {
       'GOOGL': 140,
       'MSFT': 380
     };
-    
     const basePrice = basePrices[symbol] || basePrices[symbol.replace('USDT', '')] || 100;
-    
-    // Añadir variación aleatoria ±5%
     const variation = (Math.random() - 0.5) * 0.1;
     return basePrice * (1 + variation);
   }
 
+
   disconnect() {
     this.connected = false;
-    this.credentials = {};
+    // No credentials to clear in demo mode
   }
 }
 

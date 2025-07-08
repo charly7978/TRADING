@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { tradingAPI, TradingCredentials, TradingSignal, OrderRequest, OrderResponse } from '../services/realTradingAPI';
+import { TradingCredentials, OrderRequest } from '../services/tradingAPI';
+import { tradingAPI } from '../services/tradingAPI';
 
 export interface Trade {
   id: string;
@@ -14,16 +15,7 @@ export interface Trade {
   orderId?: string;
 }
 
-export interface Asset {
-  symbol: string;
-  name: string;
-  price: number;
-  change24h: number;
-  volume: number;
-  type: 'crypto' | 'stock';
-  recommendation: 'COMPRAR' | 'VENDER' | 'MANTENER';
-  aiScore: number;
-}
+// (Usar Asset de tradingAPI)
 
 export interface Portfolio {
   totalValue: number;
@@ -35,16 +27,7 @@ export interface Portfolio {
   assets: { symbol: string; amount: number; value: number; profit: number }[];
 }
 
-export interface AIRecommendation {
-  symbol: string;
-  action: 'COMPRAR' | 'VENDER' | 'MANTENER';
-  confidence: number;
-  reasoning: string;
-  targetPrice: number;
-  stopLoss: number;
-  potentialReturn: number;
-  riskLevel: 'BAJO' | 'MEDIO' | 'ALTO';
-}
+// (Usar AIRecommendation de tradingAPI)
 
 interface TradingContextType {
   // Estados básicos
@@ -52,7 +35,7 @@ interface TradingContextType {
   setIsAutoTradingActive: (active: boolean) => void;
   portfolio: Portfolio;
   trades: Trade[];
-  assets: Asset[];
+  assets: import('../services/tradingAPI').Asset[];
   riskLevel: 'CONSERVADOR' | 'MODERADO' | 'AGRESIVO';
   setRiskLevel: (level: 'CONSERVADOR' | 'MODERADO' | 'AGRESIVO') => void;
   monthlyBudget: number;
@@ -63,8 +46,8 @@ interface TradingContextType {
   // Nuevas funciones para trading real
   isConnected: boolean;
   connectToAPIs: (credentials: TradingCredentials) => Promise<boolean>;
-  getAIRecommendations: () => Promise<AIRecommendation[]>;
-  executeRecommendation: (recommendation: AIRecommendation, amount: number) => Promise<boolean>;
+  getAIRecommendations: () => Promise<import('../services/tradingAPI').AIRecommendation[]>;
+  executeRecommendation: (recommendation: import('../services/tradingAPI').AIRecommendation, amount: number) => Promise<boolean>;
   refreshMarketData: () => Promise<void>;
   accountBalance: { [key: string]: number };
   
@@ -89,14 +72,14 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [riskLevel, setRiskLevel] = useState<'CONSERVADOR' | 'MODERADO' | 'AGRESIVO'>('MODERADO');
   const [monthlyBudget, setMonthlyBudget] = useState(500);
   const [trades, setTrades] = useState<Trade[]>([]);
-  const [assets, setAssets] = useState<Asset[]>([]);
+  const [assets, setAssets] = useState<import('../services/tradingAPI').Asset[]>([]);
   
   // Estados para trading real
   const [isConnected, setIsConnected] = useState(false);
   const [accountBalance, setAccountBalance] = useState<{ [key: string]: number }>({});
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [isExecutingTrade, setIsExecutingTrade] = useState(false);
-  const [currentRecommendations, setCurrentRecommendations] = useState<AIRecommendation[]>([]);
+  const [currentRecommendations, setCurrentRecommendations] = useState<import('../services/tradingAPI').AIRecommendation[]>([]);
 
   // Portfolio calculado dinámicamente
   const [portfolio, setPortfolio] = useState<Portfolio>({
@@ -138,7 +121,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   // Obtener recomendaciones de IA
-  const getAIRecommendations = async (): Promise<AIRecommendation[]> => {
+  const getAIRecommendations = async (): Promise<import('../services/tradingAPI').AIRecommendation[]> => {
     if (!isConnected) {
       throw new Error('No hay conexión con las APIs de trading');
     }
@@ -153,26 +136,8 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const signals = await tradingAPI.analyzeMarket(symbols);
       
       // Convertir señales a recomendaciones
-      const recommendations: AIRecommendation[] = signals.map(signal => {
-        const riskLevel = signal.confidence > 80 ? 'BAJO' : 
-                         signal.confidence > 60 ? 'MEDIO' : 'ALTO';
-        
-        const potentialReturn = signal.action === 'BUY' ? 
-          ((signal.targetPrice - signal.stopLoss) / signal.stopLoss) * 100 :
-          ((signal.stopLoss - signal.targetPrice) / signal.targetPrice) * 100;
-
-        return {
-          symbol: signal.symbol,
-          action: signal.action === 'BUY' ? 'COMPRAR' : 
-                 signal.action === 'SELL' ? 'VENDER' : 'MANTENER',
-          confidence: signal.confidence,
-          reasoning: signal.reasoning,
-          targetPrice: signal.targetPrice,
-          stopLoss: signal.stopLoss,
-          potentialReturn: Math.abs(potentialReturn),
-          riskLevel
-        };
-      });
+      // signals ya es AIRecommendation[] en demo
+      const recommendations: import('../services/tradingAPI').AIRecommendation[] = signals;
 
       // Filtrar solo recomendaciones de compra/venta con alta confianza
       const filteredRecommendations = recommendations.filter(
@@ -191,7 +156,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   // Ejecutar recomendación de trading
-  const executeRecommendation = async (recommendation: AIRecommendation, amount: number): Promise<boolean> => {
+  const executeRecommendation = async (recommendation: import('../services/tradingAPI').AIRecommendation, amount: number): Promise<boolean> => {
     if (!isConnected) {
       throw new Error('No hay conexión con las APIs de trading');
     }
@@ -253,7 +218,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const symbols = ['BTCUSDT', 'ETHUSDT', 'AAPL', 'TSLA', 'GOOGL', 'MSFT'];
       const marketData = await tradingAPI.getMarketData(symbols);
       
-      const updatedAssets: Asset[] = marketData.map(data => ({
+      const updatedAssets: import('../services/tradingAPI').Asset[] = marketData.map(data => ({
         symbol: data.symbol,
         name: getAssetName(data.symbol),
         price: data.price,
@@ -279,10 +244,10 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setAccountBalance(balance);
       
       // Actualizar portfolio
-      const totalValue = Object.values(balance).reduce((sum, value) => sum + value, 0);
+      const totalValue = Object.values(balance).reduce((sum: number, value: number) => sum + value, 0);
       setPortfolio(prev => ({
         ...prev,
-        totalValue,
+        totalValue: totalValue as number,
         availableCash: balance.USD || balance.USDT || 0
       }));
     } catch (error) {

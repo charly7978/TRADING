@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navigation from './components/Navigation';
-import AIChat from './components/AIChat';
+import { ModeSwitcher } from './components/ModeSwitcher';
+// import AIChat from './components/AIChat';
 import RealDashboard from './pages/RealDashboard';
 import AutoTrading from './pages/AutoTrading';
 import Portfolio from './pages/Portfolio';
@@ -9,14 +10,26 @@ import Education from './pages/Education';
 import Settings from './pages/Settings';
 import TradingSetup from './pages/TradingSetup';
 import AIRecommendations from './pages/AIRecommendations';
-import { RealTradingProvider, useRealTradingContext } from './context/RealTradingContext';
+import { useRealTradingContext } from './context/RealTradingContext';
+import { useTradingContext } from './context/TradingContext';
+import { useMode } from './context/ModeContext';
+
 import WelcomeModal from './components/WelcomeModal';
 // import ApiConnectModal from './components/ApiConnectModal';
 
 
+
 function AppRoutes() {
   const [showWelcome, setShowWelcome] = useState(true);
-  const { isConnected } = useRealTradingContext();
+  const { mode } = useMode();
+  let isConnected = false;
+  if (mode === 'real') {
+    const { isConnected: isRealConnected } = useRealTradingContext();
+    isConnected = isRealConnected;
+  } else {
+    const { isConnected: isDemoConnected } = useTradingContext();
+    isConnected = isDemoConnected;
+  }
 
   // Detectar si el usuario quiere usar trading real
   useEffect(() => {
@@ -27,6 +40,7 @@ function AppRoutes() {
   return (
     <Router>
       <Navigation />
+      <ModeSwitcher />
       <main className="pt-16">
         <Routes>
           <Route path="/" element={<Navigate to={isConnected ? "/dashboard" : "/trading-setup"} replace />} />
@@ -44,14 +58,28 @@ function AppRoutes() {
   );
 }
 
+
+
+import { TradingProvider } from './context/TradingContext';
+import { RealTradingProvider } from './context/RealTradingContext';
+import { ModeProvider } from './context/ModeContext';
+
+function ProviderSwitcher({ children }: { children: React.ReactNode }) {
+  const { mode } = useMode();
+  if (mode === 'real') {
+    return <RealTradingProvider>{children}</RealTradingProvider>;
+  }
+  return <TradingProvider>{children}</TradingProvider>;
+}
+
+
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      <RealTradingProvider>
+    <ModeProvider>
+      <ProviderSwitcher>
         <AppRoutes />
-        <AIChat />
-      </RealTradingProvider>
-    </div>
+      </ProviderSwitcher>
+    </ModeProvider>
   );
 }
 

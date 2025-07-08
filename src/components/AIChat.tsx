@@ -1,6 +1,8 @@
+
 import React, { useState } from "react";
 import { askAI } from "../services/aiChatService";
 import { Brain, Send } from "lucide-react";
+import { useRealTradingContext } from '../context/RealTradingContext';
 
 const AIChat = () => {
   const [messages, setMessages] = useState([
@@ -8,6 +10,24 @@ const AIChat = () => {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const {
+    portfolio,
+    trades,
+    assets,
+    aiRecommendations,
+    accountBalance
+  } = useRealTradingContext();
+
+  // Construir contexto interno para la IA
+  const buildInternalContext = () => {
+    let ctx = "";
+    ctx += `Balance: ${JSON.stringify(accountBalance)}\n`;
+    ctx += `Portafolio: ${JSON.stringify(portfolio)}\n`;
+    ctx += `Recomendaciones actuales: ${aiRecommendations?.join("; ")}\n`;
+    ctx += `Activos: ${assets?.map(a => `${a.symbol} (${a.price})`).join(", ")}\n`;
+    ctx += `Historial de trades: ${trades?.slice(0,5).map(t => `${t.type} ${t.symbol} x${t.amount} a ${t.price}`).join(" | ")}\n`;
+    return ctx;
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -15,7 +35,9 @@ const AIChat = () => {
     setMessages((msgs) => [...msgs, userMsg]);
     setInput("");
     setLoading(true);
-    const context = messages.map(m => (m.sender === "user" ? `Usuario: ${m.text}` : `AI: ${m.text}`)).join("\n");
+    const contextMsgs = messages.map(m => (m.sender === "user" ? `Usuario: ${m.text}` : `AI: ${m.text}`)).join("\n");
+    const internalContext = buildInternalContext();
+    const context = `${internalContext}\n${contextMsgs}`;
     const aiResponse = await askAI(input, context);
     setMessages((msgs) => [...msgs, { sender: "ia", text: aiResponse }]);
     setLoading(false);

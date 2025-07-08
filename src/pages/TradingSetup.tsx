@@ -165,30 +165,44 @@ const TradingSetup = () => {
     );
   }
 
+
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
       <div className="max-w-lg w-full mx-auto">
         <div className="bg-white rounded-2xl p-8 shadow-lg border border-blue-200">
+          {/* Selector explícito de modo: Simulado vs Real */}
+          <div className="flex flex-col items-center justify-center mb-8 p-4 bg-yellow-100 border-2 border-yellow-400 rounded-xl">
+            <span className="text-lg font-bold text-yellow-800 mb-4">ELIGE EL MODO DE OPERACIÓN</span>
+            <div className="flex gap-6 mb-2">
+              <button
+                type="button"
+                className={`flex flex-col items-center px-6 py-3 rounded-xl border-2 font-bold text-lg shadow-md transition-all duration-200 focus:outline-none ${paperMode ? 'bg-green-500 border-green-700 text-white scale-105' : 'bg-white border-gray-300 text-green-700 hover:bg-green-100'}`}
+                onClick={() => setPaperMode(true)}
+                aria-pressed={paperMode}
+              >
+                Simulado
+                <span className="text-xs font-normal mt-1">Paper Trading</span>
+              </button>
+              <button
+                type="button"
+                className={`flex flex-col items-center px-6 py-3 rounded-xl border-2 font-bold text-lg shadow-md transition-all duration-200 focus:outline-none ${!paperMode ? 'bg-blue-600 border-blue-800 text-white scale-105' : 'bg-white border-gray-300 text-blue-700 hover:bg-blue-100'}`}
+                onClick={() => setPaperMode(false)}
+                aria-pressed={!paperMode}
+              >
+                Real
+                <span className="text-xs font-normal mt-1">Inversión Real</span>
+              </button>
+            </div>
+            <span className="mt-2 text-xs text-gray-700 text-center">
+              {paperMode
+                ? 'Estás en modo simulado: puedes practicar sin riesgo, todas las operaciones son ficticias.'
+                : 'Estás en modo real: tus operaciones serán ejecutadas con dinero real en tu cuenta.'}
+            </span>
+          </div>
           <div className="text-center mb-8">
             <Key className="h-10 w-10 text-blue-600 mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Conecta tus APIs de Trading</h1>
             <p className="text-gray-600">Configura tus cuentas de trading real para comenzar a operar</p>
-          </div>
-
-          {/* Switch de modo simulación inteligente */}
-          <div className="flex items-center justify-center mb-6">
-            <span className="mr-3 text-sm font-medium text-gray-700">Modo Simulación Inteligente</span>
-            <button
-              type="button"
-              className={`w-14 h-7 flex items-center rounded-full p-1 duration-300 ease-in-out ${paperMode ? 'bg-green-500' : 'bg-gray-300'}`}
-              onClick={() => setPaperMode(v => !v)}
-              aria-pressed={paperMode}
-            >
-              <span
-                className={`bg-white w-6 h-6 rounded-full shadow-md transform duration-300 ease-in-out ${paperMode ? 'translate-x-7' : ''}`}
-              />
-            </button>
-            <span className="ml-3 text-xs text-gray-500">(Paper Trading)</span>
           </div>
 
           {/* Ayuda Bybit */}

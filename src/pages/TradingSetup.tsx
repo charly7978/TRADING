@@ -49,19 +49,7 @@ const TradingSetup = () => {
   const [success, setSuccess] = useState(false);
   const [connectedWallet, setConnectedWallet] = useState<string>('');
 
-  // Intentar conectar automáticamente al cargar si hay credenciales guardadas
-  useEffect(() => {
-    setConnectionError('');
-    setSuccess(false);
-    const hasBinance = credentials.binanceApiKey && credentials.binanceSecretKey;
-    const hasAlpaca = credentials.alpacaApiKey && credentials.alpacaSecretKey;
-    if (hasBinance || hasAlpaca) {
-      handleConnect();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Solo al montar
-
-  // Si el usuario cambia credenciales manualmente, reconectar
+  // Automatización máxima: conectar siempre que haya credenciales válidas, tanto al montar como al cambiar
   useEffect(() => {
     setConnectionError('');
     setSuccess(false);

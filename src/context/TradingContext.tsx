@@ -101,23 +101,15 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [marketStatus] = useState<'ABIERTO' | 'CERRADO'>('ABIERTO');
 
   // Conectar a APIs de trading
+  // Demo: solo conectar si el usuario lo solicita explícitamente (no automático)
   const connectToAPIs = async (credentials: TradingCredentials): Promise<boolean> => {
-    try {
-      tradingAPI.setCredentials(credentials);
-      const connected = tradingAPI.isApiConnected();
-      setIsConnected(connected);
-      
-      if (connected) {
-        await refreshAccountBalance();
-        await refreshMarketData();
-      }
-      
-      return connected;
-    } catch (error) {
-      console.error('Error conectando a APIs:', error);
-      setIsConnected(false);
-      return false;
-    }
+    // Simula una "conexión" solo si el usuario hace clic en conectar demo
+    setIsConnected(false);
+    await new Promise(res => setTimeout(res, 500)); // Simula espera
+    setIsConnected(true);
+    await refreshAccountBalance();
+    await refreshMarketData();
+    return true;
   };
 
   // Obtener recomendaciones de IA

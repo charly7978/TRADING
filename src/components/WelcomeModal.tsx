@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, TrendingUp, Shield, Bot, GraduationCap, Key, CheckCircle, Eye, EyeOff, Loader, ExternalLink, Clipboard, Wallet } from 'lucide-react';
+import { X, Key, CheckCircle, Eye, EyeOff, Loader, ExternalLink, Clipboard, Wallet } from 'lucide-react';
 import { useActiveTradingContext } from '../context/useActiveTradingContext';
 
 interface WelcomeModalProps {
@@ -34,7 +34,7 @@ const apiGuides = [
 
 const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
   const { isConnected, connectToAPIs } = useActiveTradingContext();
-  const [step, setStep] = useState(1);
+  // const [step, setStep] = useState(1); // No usado
   const [credentials, setCredentials] = useState({
     binanceApiKey: '',
     binanceSecretKey: '',
@@ -215,8 +215,15 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
                 <div className="relative">
                   <input
                     type="text"
-                    value={credentials[`${api.name.toLowerCase()}ApiKey`]}
-                    onChange={e => setCredentials(prev => ({ ...prev, [`${api.name.toLowerCase()}ApiKey`]: e.target.value }))}
+                    value={
+                      api.name === 'Binance' ? credentials.binanceApiKey : credentials.alpacaApiKey
+                    }
+                    onChange={e => setCredentials(prev => ({
+                      ...prev,
+                      ...(api.name === 'Binance'
+                        ? { binanceApiKey: e.target.value }
+                        : { alpacaApiKey: e.target.value })
+                    }))}
                     placeholder="API Key"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-2"
                     autoComplete="off"
@@ -232,20 +239,35 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
                 </div>
                 <div className="relative">
                   <input
-                    type={showSecrets[`${api.name.toLowerCase()}Secret`] ? 'text' : 'password'}
-                    value={credentials[`${api.name.toLowerCase()}SecretKey`]}
-                    onChange={e => setCredentials(prev => ({ ...prev, [`${api.name.toLowerCase()}SecretKey`]: e.target.value }))}
+                    type={api.name === 'Binance' ? (showSecrets.binanceSecret ? 'text' : 'password') : (showSecrets.alpacaSecret ? 'text' : 'password')}
+                    value={
+                      api.name === 'Binance' ? credentials.binanceSecretKey : credentials.alpacaSecretKey
+                    }
+                    onChange={e => setCredentials(prev => ({
+                      ...prev,
+                      ...(api.name === 'Binance'
+                        ? { binanceSecretKey: e.target.value }
+                        : { alpacaSecretKey: e.target.value })
+                    }))}
                     placeholder="Secret Key"
                     className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg"
                     autoComplete="off"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowSecrets(prev => ({ ...prev, [`${api.name.toLowerCase()}Secret`]: !prev[`${api.name.toLowerCase()}Secret`] }))}
+                    onClick={() => setShowSecrets(prev => ({
+                      ...prev,
+                      ...(api.name === 'Binance'
+                        ? { binanceSecret: !prev.binanceSecret }
+                        : { alpacaSecret: !prev.alpacaSecret })
+                    }))}
                     className="absolute right-8 top-2 text-gray-400 hover:text-blue-600"
                     title="Mostrar/ocultar"
                   >
-                    {showSecrets[`${api.name.toLowerCase()}Secret`] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {api.name === 'Binance'
+                      ? (showSecrets.binanceSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />)
+                      : (showSecrets.alpacaSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />)
+                    }
                   </button>
                   <button
                     type="button"

@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
@@ -52,16 +52,20 @@ const Navigation = () => {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
-              
+              const isDisabled = !isConnected;
               return (
                 <Link
                   key={item.path}
-                  to={item.path}
+                  to={isDisabled ? '/trading-setup' : item.path}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     isActive
                       ? 'bg-blue-100 text-blue-700 shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      : isDisabled
+                        ? 'text-gray-400 cursor-not-allowed opacity-60 pointer-events-none'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
+                  tabIndex={isDisabled ? -1 : 0}
+                  aria-disabled={isDisabled}
                 >
                   <Icon className="h-4 w-4" />
                   <span className="text-sm font-medium">{item.label}</span>
@@ -117,14 +121,20 @@ const Navigation = () => {
           {navItems.slice(0, 4).map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
-            
+            const isDisabled = !isConnected;
             return (
               <Link
                 key={item.path}
-                to={item.path}
+                to={isDisabled ? '/trading-setup' : item.path}
                 className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg ${
-                  isActive ? 'text-blue-600' : 'text-gray-500'
+                  isActive
+                    ? 'text-blue-600'
+                    : isDisabled
+                      ? 'text-gray-300 cursor-not-allowed opacity-60 pointer-events-none'
+                      : 'text-gray-500'
                 }`}
+                tabIndex={isDisabled ? -1 : 0}
+                aria-disabled={isDisabled}
               >
                 <Icon className="h-5 w-5" />
                 <span className="text-xs font-medium">{item.label.split(' ')[0]}</span>

@@ -16,12 +16,29 @@ import {
 const TradingSetup = () => {
   const { connectToAPIs, isConnected } = useRealTradingContext();
   
-  const [credentials, setCredentials] = useState({
-    binanceApiKey: '',
-    binanceSecretKey: '',
-    alpacaApiKey: '',
-    alpacaSecretKey: '',
-    polygonApiKey: ''
+  // Inicializar credenciales desde localStorage si existen
+  const [credentials, setCredentials] = useState(() => {
+    const stored = localStorage.getItem('tradingCredentials');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return {
+          binanceApiKey: '',
+          binanceSecretKey: '',
+          alpacaApiKey: '',
+          alpacaSecretKey: '',
+          polygonApiKey: ''
+        };
+      }
+    }
+    return {
+      binanceApiKey: '',
+      binanceSecretKey: '',
+      alpacaApiKey: '',
+      alpacaSecretKey: '',
+      polygonApiKey: ''
+    };
   });
 
   const [showSecrets, setShowSecrets] = useState({
@@ -34,14 +51,25 @@ const TradingSetup = () => {
   const [success, setSuccess] = useState(false);
   const [connectedWallet, setConnectedWallet] = useState<string>('');
 
-  // Intentar conectar automáticamente cuando se llenan los campos necesarios
+  // Intentar conectar automáticamente al cargar si hay credenciales guardadas
   useEffect(() => {
     setConnectionError('');
     setSuccess(false);
-    if (
-      (credentials.binanceApiKey && credentials.binanceSecretKey) ||
-      (credentials.alpacaApiKey && credentials.alpacaSecretKey)
-    ) {
+    const hasBinance = credentials.binanceApiKey && credentials.binanceSecretKey;
+    const hasAlpaca = credentials.alpacaApiKey && credentials.alpacaSecretKey;
+    if (hasBinance || hasAlpaca) {
+      handleConnect();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo al montar
+
+  // Si el usuario cambia credenciales manualmente, reconectar
+  useEffect(() => {
+    setConnectionError('');
+    setSuccess(false);
+    const hasBinance = credentials.binanceApiKey && credentials.binanceSecretKey;
+    const hasAlpaca = credentials.alpacaApiKey && credentials.alpacaSecretKey;
+    if (hasBinance || hasAlpaca) {
       handleConnect();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -52,18 +80,29 @@ const TradingSetup = () => {
     setConnectionError('');
     setSuccess(false);
     try {
-      const ok = await connectToAPIs(credentials);
-      if (ok) {
+      const result = await connectToAPIs(credentials);
+      if (result && result.success) {
         setSuccess(true);
         localStorage.setItem('tradingCredentials', JSON.stringify(credentials));
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 1200);
       } else {
-        setConnectionError('Error conectando con las APIs. Verifica tus claves.');
+        // Mensaje detallado según el error recibido
+        if (result && result.error) {
+          if (result.error.toLowerCase().includes('network') || result.error.toLowerCase().includes('fetch')) {
+            setConnectionError('No se pudo conectar al servidor local. Asegúrate de haber ejecutado el archivo "iniciar-todo.bat" y que el proxy esté activo.');
+          } else if (result.error.toLowerCase().includes('api key') || result.error.toLowerCase().includes('clave')) {
+            setConnectionError('Tus claves API parecen incorrectas o no tienen permisos suficientes. Revisa que sean correctas y tengan permisos de trading.');
+          } else {
+            setConnectionError('Error conectando con las APIs: ' + result.error);
+          }
+        } else {
+          setConnectionError('Error conectando con las APIs. Verifica tus claves y conexión a internet.');
+        }
       }
     } catch (e) {
-      setConnectionError('Error de conexión. Inténtalo de nuevo.');
+      setConnectionError('Error inesperado de conexión. Revisa tu internet y que el proxy esté activo.');
     } finally {
       setIsConnecting(false);
     }
@@ -162,9 +201,16 @@ const TradingSetup = () => {
             </div>
           )}
           {connectionError && (
-            <div className="flex items-center justify-center mb-6">
+            <div className="flex flex-col items-center justify-center mb-6">
               <AlertTriangle className="h-6 w-6 text-yellow-600 mr-2" />
-              <span className="text-yellow-700 font-medium">{connectionError}</span>
+              <span className="text-yellow-700 font-medium text-center">{connectionError}</span>
+              <ul className="text-xs text-gray-500 mt-2 list-disc list-inside text-left">
+                <li>1. Verifica que ejecutaste <b>iniciar-todo.bat</b> (esto abre dos ventanas: proxy y frontend).</li>
+                <li>2. Si cambiaste tus claves API, revisa que sean correctas y tengan permisos de trading.</li>
+                <li>3. Si el error persiste, revisa tu conexión a internet y vuelve a intentarlo.</li>
+                <li>4. Si usas Binance, asegúrate de que la API Key tenga permisos de "Spot Trading" y <b>NO</b> de retiro.</li>
+                <li>5. Si usas Alpaca, comienza con "Paper Trading" para evitar bloqueos.</li>
+              </ul>
             </div>
           )}
 
@@ -191,7 +237,7 @@ const TradingSetup = () => {
               <input
                 type="text"
                 value={credentials.binanceApiKey}
-                onChange={e => setCredentials(prev => ({ ...prev, binanceApiKey: e.target.value }))}
+                onChange={e => setCredentials((prev: typeof credentials) => ({ ...prev, binanceApiKey: e.target.value }))}
                 placeholder="API Key"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-2"
                 autoComplete="off"
@@ -200,7 +246,7 @@ const TradingSetup = () => {
                 <input
                   type={showSecrets.binanceSecret ? 'text' : 'password'}
                   value={credentials.binanceSecretKey}
-                  onChange={e => setCredentials(prev => ({ ...prev, binanceSecretKey: e.target.value }))}
+                  onChange={e => setCredentials((prev: typeof credentials) => ({ ...prev, binanceSecretKey: e.target.value }))}
                   placeholder="Secret Key"
                   className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg"
                   autoComplete="off"
@@ -235,7 +281,7 @@ const TradingSetup = () => {
               <input
                 type="text"
                 value={credentials.alpacaApiKey}
-                onChange={e => setCredentials(prev => ({ ...prev, alpacaApiKey: e.target.value }))}
+                onChange={e => setCredentials((prev: typeof credentials) => ({ ...prev, alpacaApiKey: e.target.value }))}
                 placeholder="API Key ID"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-2"
                 autoComplete="off"
@@ -244,7 +290,7 @@ const TradingSetup = () => {
                 <input
                   type={showSecrets.alpacaSecret ? 'text' : 'password'}
                   value={credentials.alpacaSecretKey}
-                  onChange={e => setCredentials(prev => ({ ...prev, alpacaSecretKey: e.target.value }))}
+                  onChange={e => setCredentials((prev: typeof credentials) => ({ ...prev, alpacaSecretKey: e.target.value }))}
                   placeholder="Secret Key"
                   className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg"
                   autoComplete="off"
@@ -279,7 +325,7 @@ const TradingSetup = () => {
               <input
                 type="text"
                 value={credentials.polygonApiKey}
-                onChange={e => setCredentials(prev => ({ ...prev, polygonApiKey: e.target.value }))}
+                onChange={e => setCredentials((prev: typeof credentials) => ({ ...prev, polygonApiKey: e.target.value }))}
                 placeholder="API Key"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                 autoComplete="off"

@@ -18,13 +18,22 @@ const Dashboard = () => {
   // Detectar modo demo/real
   const paperMode = localStorage.getItem('paperTradingEnabled') === 'true';
 
-  // Contextos
-  let ctx: any = null;
+  // Siempre llamar ambos hooks para cumplir reglas de hooks
+  let realCtx: ReturnType<typeof useRealTradingContext> | null = null;
+  let demoCtx: ReturnType<typeof useTradingContext> | null = null;
   try {
-    ctx = paperMode ? useTradingContext() : useRealTradingContext();
+    realCtx = useRealTradingContext();
   } catch (e) {
-    ctx = null;
+    realCtx = null;
   }
+  try {
+    demoCtx = useTradingContext();
+  } catch (e) {
+    demoCtx = null;
+  }
+
+  // Seleccionar contexto según modo
+  const ctx = paperMode ? demoCtx : realCtx;
 
   // Fallback global: si el contexto está caído, mostrar error y opción de volver a configuración
   if (!ctx) {
@@ -65,15 +74,18 @@ const Dashboard = () => {
   } = ctx;
 
   // Usar datos del portfolio (real o demo)
-  const performanceData = portfolio.performance && portfolio.performance.length > 0 ? portfolio.performance : [];
+  // Soporte para performance solo en RealPortfolio
+  const performanceData = (portfolio as any)?.performance && Array.isArray((portfolio as any).performance) && (portfolio as any).performance.length > 0
+    ? (portfolio as any).performance
+    : [];
 
-  const StatCard = ({ 
-    title, 
-    value, 
-    change, 
-    icon: Icon, 
-    positive, 
-    subtitle 
+  const StatCard = ({
+    title,
+    value,
+    change,
+    icon: Icon,
+    positive,
+    subtitle,
   }: {
     title: string;
     value: string;
@@ -81,97 +93,73 @@ const Dashboard = () => {
     icon: React.ElementType;
     positive?: boolean;
     subtitle?: string;
-  }) => (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-gray-500 text-sm font-medium mb-1">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
-          {change && (
-            <div className={`flex items-center text-sm ${positive ? 'text-green-600' : 'text-red-600'}`}>
-              {positive ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-              <span className="font-medium">{change}</span>
-            </div>
-          )}
-          {subtitle && (
-            <p className="text-gray-400 text-xs mt-1">{subtitle}</p>
-          )}
-        </div>
-        <div className={`p-3 rounded-xl ${positive ? 'bg-green-100' : positive === false ? 'bg-red-100' : 'bg-blue-100'}`}>
-          <Icon className={`h-6 w-6 ${positive ? 'text-green-600' : positive === false ? 'text-red-600' : 'text-blue-600'}`} />
-  return (
-    <div className="min-h-screen p-6 space-y-6">
-      <AIChat />
-      <div className="max-w-7xl mx-auto">
-        {/* Header con saludo personalizado */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Hola! 👋</h1>
-          <p className="text-gray-600">Aquí tienes un resumen de tus inversiones de hoy</p>
-        </div>
-
-        {/* Control del Bot de Trading */}
-        <div className="bg-gradient-to-r from-blue-500 to-green-500 rounded-2xl p-6 text-white mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-white/20 rounded-xl">
-                <Bot className="h-8 w-8" />
+  }) => {
+    return (
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="text-gray-500 text-sm font-medium mb-1">{title}</p>
+            <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
+            {change && (
+              <div className={`flex items-center text-sm ${positive ? 'text-green-600' : 'text-red-600'}`}>
+                {positive ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                <span className="font-medium">{change}</span>
               </div>
-              <div>
-                <h3 className="text-xl font-bold">Trading Automático</h3>
-                <p className="text-white/90">
-                  {isAutoTradingActive ? 'Tu asistente está trabajando' : 'Tu asistente está pausado'}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className={`flex items-center space-x-2 px-4 py-2 rounded-full ${
-                isAutoTradingActive ? 'bg-green-500/30' : 'bg-red-500/30'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${
-                  isAutoTradingActive ? 'bg-green-300 animate-pulse' : 'bg-red-300'
-                }`}></div>
-                <span className="text-sm font-medium">
-                  {isAutoTradingActive ? 'ACTIVO' : 'PAUSADO'}
-                </span>
-              </div>
-              
-              <button
-                onClick={() => setIsAutoTradingActive(!isAutoTradingActive)}
-                className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
-                  isAutoTradingActive
-                    ? 'bg-red-500 hover:bg-red-600 text-white'
-                    : 'bg-white text-blue-600 hover:bg-gray-50'
-                }`}
-              >
-                {isAutoTradingActive ? 'Pausar' : 'Activar'}
-              </button>
-            </div>
+            )}
+            {subtitle && <p className="text-gray-400 text-xs mt-1">{subtitle}</p>}
           </div>
+          <div className={`p-3 rounded-xl ${positive ? 'bg-green-100' : positive === false ? 'bg-red-100' : 'bg-blue-100'}`}>
+            <Icon className={`h-6 w-6 ${positive ? 'text-green-600' : positive === false ? 'text-red-600' : 'text-blue-600'}`} />
+          </div>
+        </div>
+      </div>
+    );
+  };
+  return (
+    <div className="min-h-screen p-6 bg-gradient-to-br from-blue-50 to-green-50">
+      <div className="max-w-7xl mx-auto">
+        {/* Estado del asistente */}
+        <div className="flex flex-col md:flex-row items-center justify-between mb-8">
+          <div className="flex items-center space-x-4 mb-4 md:mb-0">
+            <div className={`rounded-full px-4 py-2 ${isAutoTradingActive ? 'bg-green-500/30' : 'bg-red-500/30'}`}> 
+              <span className="font-semibold text-lg">
+                {isAutoTradingActive ? 'Auto-Trading Activo' : 'Auto-Trading Pausado'}
+              </span>
+            </div>
+            <button
+              className={`ml-2 px-4 py-2 rounded-full font-semibold ${isAutoTradingActive ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-700'}`}
+              onClick={() => setIsAutoTradingActive && setIsAutoTradingActive(!isAutoTradingActive)}
+            >
+              {isAutoTradingActive ? 'Pausar' : 'Activar'}
+            </button>
+          </div>
+          <p className="text-white/90 text-lg">
+            {isAutoTradingActive ? 'Tu asistente está trabajando' : 'Tu asistente está pausado'}
+          </p>
         </div>
 
         {/* Estadísticas principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Mi Dinero Total"
-            value={`$${portfolio.totalValue.toLocaleString()}`}
-            change={`+$${portfolio.dailyPnL.toFixed(2)} hoy`}
+            value={`$${portfolio?.totalValue?.toLocaleString?.() ?? '0'}`}
+            change={portfolio?.dailyPnL !== undefined ? `+$${portfolio.dailyPnL.toFixed(2)} hoy` : ''}
             icon={DollarSign}
-            positive={portfolio.dailyPnL > 0}
+            positive={portfolio?.dailyPnL > 0}
           />
           <StatCard
             title="Ganancias Totales"
-            value={`$${portfolio.totalPnL.toFixed(2)}`}
-            change={`${((portfolio.totalPnL / (portfolio.totalValue - portfolio.totalPnL)) * 100).toFixed(1)}%`}
+            value={`$${portfolio?.totalPnL?.toFixed?.(2) ?? '0.00'}`}
+            change={portfolio && portfolio.totalValue && portfolio.totalPnL !== undefined && (portfolio.totalValue - portfolio.totalPnL) !== 0 ? `${((portfolio.totalPnL / (portfolio.totalValue - portfolio.totalPnL)) * 100).toFixed(1)}%` : ''}
             icon={TrendingUp}
-            positive={portfolio.totalPnL > 0}
+            positive={portfolio?.totalPnL > 0}
           />
           <StatCard
             title="Operaciones Exitosas"
-            value={`${portfolio.winRate}%`}
-            subtitle={`${portfolio.totalTrades} operaciones totales`}
+            value={`${portfolio?.winRate ?? 0}%`}
+            subtitle={`${portfolio?.totalTrades ?? 0} operaciones totales`}
             icon={Target}
-            positive={portfolio.winRate > 70}
+            positive={portfolio?.winRate > 70}
           />
           <StatCard
             title="Estado del Mercado"
@@ -246,7 +234,7 @@ const Dashboard = () => {
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-xl font-bold text-gray-900 mb-6">Últimas Operaciones</h3>
           <div className="space-y-4">
-            {trades.slice(0, 5).map((trade) => (
+            {trades.slice(0, 5).map((trade: any) => (
               <div key={trade.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                 <div className="flex items-center space-x-4">
                   <div className={`p-2 rounded-lg ${
@@ -296,11 +284,6 @@ const Dashboard = () => {
                 Usamos brokers regulados y las mejores medidas de seguridad del mercado.
               </p>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
           </div>
         </div>
       </div>

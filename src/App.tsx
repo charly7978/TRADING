@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import AIChat from './components/AIChat';
@@ -11,7 +11,7 @@ import TradingSetup from './pages/TradingSetup';
 import AIRecommendations from './pages/AIRecommendations';
 import { RealTradingProvider, useRealTradingContext } from './context/RealTradingContext';
 import WelcomeModal from './components/WelcomeModal';
-import ApiConnectModal from './components/ApiConnectModal';
+// import ApiConnectModal from './components/ApiConnectModal';
 
 
 function AppRoutes() {
@@ -20,8 +20,8 @@ function AppRoutes() {
 
   // Detectar si el usuario quiere usar trading real
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const realMode = urlParams.get('real') === 'true';
+    // const urlParams = new URLSearchParams(window.location.search);
+    // const realMode = urlParams.get('real') === 'true';
   }, []);
 
   return (

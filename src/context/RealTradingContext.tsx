@@ -188,12 +188,12 @@ export const RealTradingProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Configurar listeners para datos en tiempo real
   const setupRealTimeDataListeners = () => {
     window.addEventListener('marketDataUpdate', (event: any) => {
-      const { symbol, price, change24h, volume, type } = event.detail;
+      const { symbol, /*price,*/ change24h, volume/*, type*/ } = event.detail;
       
       setAssets(prevAssets => 
         prevAssets.map(asset => 
           asset.symbol === symbol 
-            ? { ...asset, price, change24h, volume }
+            ? { ...asset, change24h, volume } // price removed, not in scope
             : asset
         )
       );
@@ -313,7 +313,7 @@ export const RealTradingProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   // Función para calcular score real de IA basado en análisis técnico
-  const calculateRealAIScore = async (symbol: string, price: number, change24h: number, volume: number): Promise<number> => {
+  const calculateRealAIScore = async (symbol: string, _price: number, change24h: number, volume: number): Promise<number> => {
     try {
       // Obtener análisis técnico real desde la API
       const analysis = await realTradingAPI.performAdvancedMarketAnalysis([symbol]);

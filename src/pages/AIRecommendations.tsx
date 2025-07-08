@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRealTradingContext } from '../context/RealTradingContext';
 import { useTradingContext } from '../context/TradingContext';
 import {
@@ -14,15 +14,47 @@ import {
 const AIRecommendations = () => {
 
   // Estado local para modo simulado, sincronizado solo al montar
-  const [paperMode, setPaperMode] = useState(() => localStorage.getItem('paperTradingEnabled') === 'true');
+  const [paperMode] = useState(() => localStorage.getItem('paperTradingEnabled') === 'true');
 
-  // Selección de contexto según modo
-  let ctx;
+  // Siempre llamar ambos hooks para cumplir reglas de hooks
+  // Siempre llamar hooks fuera de try/catch para cumplir reglas de React
+  let realCtx: ReturnType<typeof useRealTradingContext> | null = null;
+  let demoCtx: ReturnType<typeof useTradingContext> | null = null;
   try {
-    ctx = paperMode ? useTradingContext() : useRealTradingContext();
+    realCtx = useRealTradingContext();
   } catch (e) {
-    ctx = null;
+    realCtx = null;
   }
+  try {
+    demoCtx = useTradingContext();
+  } catch (e) {
+    demoCtx = null;
+  }
+
+  // Si ambos contextos fallan, mostrar error global
+  if (!realCtx && !demoCtx) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yellow-50 to-blue-50">
+        <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-8 border border-yellow-200 text-center">
+          <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Error crítico de contexto
+          </h2>
+          <p className="text-gray-600 mb-6">
+            No se pudo inicializar el contexto de trading.<br />
+            Por favor, recarga la página o revisa la configuración de la app.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+          >
+            Recargar
+          </button>
+        </div>
+      </div>
+    );
+  }
+  const ctx = paperMode ? demoCtx : realCtx;
   const isConnected = ctx?.isConnected ?? false;
   const getAIRecommendations = ctx?.getAIRecommendations;
   const executeRecommendation = ctx?.executeRecommendation;
@@ -45,6 +77,7 @@ const AIRecommendations = () => {
   }, [paperMode, isConnected]);
 
   const loadRecommendations = async () => {
+    if (!getAIRecommendations) return;
     try {
       const recs = await getAIRecommendations();
       setRecommendations(recs);
@@ -55,7 +88,7 @@ const AIRecommendations = () => {
   };
 
   const handleExecuteRecommendation = async () => {
-    if (!selectedRecommendation) return;
+    if (!selectedRecommendation || !executeRecommendation) return;
 
     try {
       const success = await executeRecommendation(selectedRecommendation, investmentAmount);
@@ -213,7 +246,7 @@ const AIRecommendations = () => {
                   <div key={currency}>
                     <p className="text-white/80 text-sm">{currency}</p>
                     <p className="text-xl font-bold">
-                      {typeof amount === 'number' ? amount.toLocaleString() : amount}
+                      {typeof amount === 'number' ? amount.toLocaleString() : String(amount ?? '')}
                     </p>
                   </div>
                 ))}

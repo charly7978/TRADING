@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { askAI } from "../services/aiChatService";
 import { Brain, Send } from "lucide-react";
 import { useRealTradingContext } from '../context/RealTradingContext';

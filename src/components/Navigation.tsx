@@ -14,11 +14,11 @@ import {
   Play,
   Pause
 } from 'lucide-react';
-import { useActiveTradingContext } from '../context/useActiveTradingContext';
+import { useRealTradingContext } from '../context/RealTradingContext';
 
 const Navigation = () => {
   const location = useLocation();
-  const { isConnected, isAutoTradingActive, setIsAutoTradingActive } = useActiveTradingContext();
+  const { isConnected, isAutoTradingActive, setIsAutoTradingActive } = useRealTradingContext();
 
   const navItems = [
     { path: '/dashboard', label: 'Inicio', icon: Home },

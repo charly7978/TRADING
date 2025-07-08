@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navigation from './components/Navigation';
-import { ModeSwitcher } from './components/ModeSwitcher';
+// import { ModeSwitcher } from './components/ModeSwitcher';
 // import AIChat from './components/AIChat';
 import RealDashboard from './pages/RealDashboard';
 import AutoTrading from './pages/AutoTrading';
@@ -11,8 +11,6 @@ import Settings from './pages/Settings';
 import TradingSetup from './pages/TradingSetup';
 import AIRecommendations from './pages/AIRecommendations';
 import { useRealTradingContext } from './context/RealTradingContext';
-import { useTradingContext } from './context/TradingContext';
-import { useMode } from './context/ModeContext';
 
 import WelcomeModal from './components/WelcomeModal';
 // import ApiConnectModal from './components/ApiConnectModal';
@@ -21,15 +19,7 @@ import WelcomeModal from './components/WelcomeModal';
 
 function AppRoutes() {
   const [showWelcome, setShowWelcome] = useState(true);
-  const { mode } = useMode();
-  let isConnected = false;
-  if (mode === 'real') {
-    const { isConnected: isRealConnected } = useRealTradingContext();
-    isConnected = isRealConnected;
-  } else {
-    const { isConnected: isDemoConnected } = useTradingContext();
-    isConnected = isDemoConnected;
-  }
+  const { isConnected } = useRealTradingContext();
 
   // Detectar si el usuario quiere usar trading real
   useEffect(() => {
@@ -40,7 +30,7 @@ function AppRoutes() {
   return (
     <Router>
       <Navigation />
-      <ModeSwitcher />
+      {/* <ModeSwitcher /> */}
       <main className="pt-16">
         <Routes>
           <Route path="/" element={<Navigate to={isConnected ? "/dashboard" : "/trading-setup"} replace />} />
@@ -60,26 +50,15 @@ function AppRoutes() {
 
 
 
-import { TradingProvider } from './context/TradingContext';
 import { RealTradingProvider } from './context/RealTradingContext';
-import { ModeProvider } from './context/ModeContext';
-
-function ProviderSwitcher({ children }: { children: React.ReactNode }) {
-  const { mode } = useMode();
-  if (mode === 'real') {
-    return <RealTradingProvider>{children}</RealTradingProvider>;
-  }
-  return <TradingProvider>{children}</TradingProvider>;
-}
 
 
-function App() {
+
+
   return (
-    <ModeProvider>
-      <ProviderSwitcher>
-        <AppRoutes />
-      </ProviderSwitcher>
-    </ModeProvider>
+    <RealTradingProvider>
+      <AppRoutes />
+    </RealTradingProvider>
   );
 }
 

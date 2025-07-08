@@ -15,6 +15,8 @@ import { useRealTradingContext } from './context/RealTradingContext';
 import WelcomeModal from './components/WelcomeModal';
 // import ApiConnectModal from './components/ApiConnectModal';
 
+import { ModeProvider } from './context/ModeContext';
+import { TradingProvider } from './context/TradingContext';
 
 
 function AppRoutes() {
@@ -53,12 +55,15 @@ function AppRoutes() {
 import { RealTradingProvider } from './context/RealTradingContext';
 
 
-
-
+function App() {
   return (
-    <RealTradingProvider>
-      <AppRoutes />
-    </RealTradingProvider>
+    <ModeProvider>
+      <TradingProvider>
+        <RealTradingProvider>
+          <AppRoutes />
+        </RealTradingProvider>
+      </TradingProvider>
+    </ModeProvider>
   );
 }
 

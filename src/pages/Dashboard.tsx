@@ -1,4 +1,5 @@
 import { useRealTradingContext } from '../context/RealTradingContext';
+import { useTradingContext } from '../context/TradingContext';
 import AIChat from '../components/AIChat';
 import {
   TrendingUp,
@@ -12,7 +13,48 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+
 const Dashboard = () => {
+  // Detectar modo demo/real
+  const paperMode = localStorage.getItem('paperTradingEnabled') === 'true';
+
+  // Contextos
+  let ctx: any = null;
+  try {
+    ctx = paperMode ? useTradingContext() : useRealTradingContext();
+  } catch (e) {
+    ctx = null;
+  }
+
+  // Fallback global: si el contexto está caído, mostrar error y opción de volver a configuración
+  if (!ctx) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yellow-50 to-blue-50">
+        <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-8 border border-yellow-200 text-center">
+          <AIChat />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Error de contexto
+          </h2>
+          <p className="text-gray-600 mb-6">
+            El contexto de trading se ha perdido o no se pudo inicializar.<br />
+            Esto puede ocurrir si recargaste la página o hubo un error interno.<br />
+            Por favor, vuelve a elegir el modo de operación o reconecta tus APIs.
+          </p>
+          <button
+            onClick={() => {
+              localStorage.removeItem('paperTradingEnabled');
+              window.location.href = '/trading-setup';
+            }}
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+          >
+            Volver a configuración
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Extraer datos del contexto correcto
   const { 
     portfolio, 
     isAutoTradingActive, 
@@ -20,9 +62,9 @@ const Dashboard = () => {
     trades,
     marketStatus,
     aiRecommendations,
-  } = useRealTradingContext();
+  } = ctx;
 
-  // Usar datos reales del portfolio
+  // Usar datos del portfolio (real o demo)
   const performanceData = portfolio.performance && portfolio.performance.length > 0 ? portfolio.performance : [];
 
   const StatCard = ({ 
@@ -57,11 +99,6 @@ const Dashboard = () => {
         </div>
         <div className={`p-3 rounded-xl ${positive ? 'bg-green-100' : positive === false ? 'bg-red-100' : 'bg-blue-100'}`}>
           <Icon className={`h-6 w-6 ${positive ? 'text-green-600' : positive === false ? 'text-red-600' : 'text-blue-600'}`} />
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen p-6 space-y-6">
       <AIChat />
@@ -259,6 +296,11 @@ const Dashboard = () => {
                 Usamos brokers regulados y las mejores medidas de seguridad del mercado.
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRealTradingContext } from '../context/RealTradingContext';
+import { useTradingContext } from '../context/TradingContext';
 import {
   Brain,
   Shield,
@@ -11,14 +12,23 @@ import {
 } from 'lucide-react';
 
 const AIRecommendations = () => {
-  const {
-    getAIRecommendations,
-    executeRecommendation,
-    isConnected,
-    isLoadingRecommendations,
-    isExecutingTrade,
-    accountBalance,
-  } = useRealTradingContext();
+
+  // Estado local para modo simulado, sincronizado solo al montar
+  const [paperMode, setPaperMode] = useState(() => localStorage.getItem('paperTradingEnabled') === 'true');
+
+  // Selección de contexto según modo
+  let ctx;
+  try {
+    ctx = paperMode ? useTradingContext() : useRealTradingContext();
+  } catch (e) {
+    ctx = null;
+  }
+  const isConnected = ctx?.isConnected ?? false;
+  const getAIRecommendations = ctx?.getAIRecommendations;
+  const executeRecommendation = ctx?.executeRecommendation;
+  const isLoadingRecommendations = ctx?.isLoadingRecommendations ?? false;
+  const isExecutingTrade = ctx?.isExecutingTrade ?? false;
+  const accountBalance = ctx?.accountBalance ?? {};
 
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [selectedRecommendation, setSelectedRecommendation] = useState<any>(null);
@@ -26,12 +36,13 @@ const AIRecommendations = () => {
   const [showExecuteModal, setShowExecuteModal] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  // Cargar recomendaciones al montar el componente
+
+  // Cargar recomendaciones al montar o si cambia modo demo/conexión
   useEffect(() => {
-    if (isConnected) {
+    if (paperMode || isConnected) {
       loadRecommendations();
     }
-  }, [isConnected]);
+  }, [paperMode, isConnected]);
 
   const loadRecommendations = async () => {
     try {
@@ -81,33 +92,64 @@ const AIRecommendations = () => {
   };
 
 
-  if (!isConnected) {
-    // Permitir modo demo si está activado
-    const paperMode = localStorage.getItem('paperTradingEnabled') === 'true';
-    if (paperMode) {
-      return (
-        <div className="min-h-screen p-6 flex items-center justify-center bg-gradient-to-br from-yellow-50 to-blue-50">
-          <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-8 border border-yellow-200">
-            <Brain className="h-16 w-16 text-yellow-500 mx-auto mb-4 animate-bounce" />
-            <h2 className="text-3xl font-bold text-yellow-800 mb-2 text-center">¡Bienvenido al modo Simulado!</h2>
-            <p className="text-gray-700 mb-4 text-center">
-              Soy tu asistente de inversión inteligente. Analizaré el mercado, te explicaré cada recomendación y te guiaré paso a paso para que aprendas a invertir como un profesional, sin riesgo real.
-            </p>
-            <ul className="list-disc list-inside text-gray-600 mb-6">
-              <li>Recibirás análisis detallados y consejos personalizados.</li>
-              <li>Puedes simular compras y ventas, y ver cómo evoluciona tu portafolio.</li>
-              <li>Haz preguntas, experimenta y aprende con feedback inmediato.</li>
-            </ul>
-            <button
-              onClick={() => window.location.href = '/dashboard'}
-              className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all mt-4"
-            >
-              Ir al Dashboard Simulado
-            </button>
-          </div>
+
+  // Fallback global: si el contexto está caído y NO es modo simulado, muestra error y opción de volver a configuración
+  if (!ctx && !paperMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yellow-50 to-blue-50">
+        <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-8 border border-yellow-200 text-center">
+          <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Error de contexto
+          </h2>
+          <p className="text-gray-600 mb-6">
+            El contexto de trading se ha perdido o no se pudo inicializar.<br />
+            Esto puede ocurrir si recargaste la página o hubo un error interno.<br />
+            Por favor, vuelve a elegir el modo de operación o reconecta tus APIs.
+          </p>
+          <button
+            onClick={() => {
+              localStorage.removeItem('paperTradingEnabled');
+              window.location.href = '/trading-setup';
+            }}
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+          >
+            Volver a configuración
+          </button>
         </div>
-      );
-    }
+      </div>
+    );
+  }
+
+  // Si está en modo demo y el contexto está caído, mostrar advertencia pero permitir explorar solo modo demo (UI idéntica, sin datos)
+  if (paperMode && !ctx) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yellow-50 to-blue-50">
+        <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-8 border border-yellow-200 text-center">
+          <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Error de contexto demo
+          </h2>
+          <p className="text-gray-600 mb-6">
+            El contexto de trading simulado no está disponible.<br />
+            Puedes recargar la página o volver a la configuración para reactivar el modo demo.
+          </p>
+          <button
+            onClick={() => {
+              localStorage.removeItem('paperTradingEnabled');
+              window.location.href = '/trading-setup';
+            }}
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+          >
+            Volver a configuración
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no está conectado y no es modo demo, muestra pantalla de conexión
+  if (!isConnected && !paperMode) {
     return (
       <div className="min-h-screen p-6 flex items-center justify-center">
         <div className="text-center">

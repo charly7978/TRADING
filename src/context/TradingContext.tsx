@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { tradingAPI, TradingCredentials, TradingSignal, OrderRequest, OrderResponse } from '../services/tradingAPI';
+import { tradingAPI, TradingCredentials, TradingSignal, OrderRequest, OrderResponse } from '../services/realTradingAPI';
 
 export interface Trade {
   id: string;

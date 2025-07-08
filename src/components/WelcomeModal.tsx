@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, TrendingUp, Shield, Bot, GraduationCap, Key, CheckCircle, Eye, EyeOff, Loader, ExternalLink, Clipboard, Wallet } from 'lucide-react';
-import { useRealTradingContext } from '../context/RealTradingContext';
+import { useActiveTradingContext } from '../context/useActiveTradingContext';
 
 interface WelcomeModalProps {
   onClose: () => void;
@@ -33,7 +33,7 @@ const apiGuides = [
 ];
 
 const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
-  const { isConnected, connectToAPIs } = useRealTradingContext();
+  const { isConnected, connectToAPIs } = useActiveTradingContext();
   const [step, setStep] = useState(1);
   const [credentials, setCredentials] = useState({
     binanceApiKey: '',

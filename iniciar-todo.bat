@@ -5,6 +5,10 @@ start "PROXY" cmd /k "node proxy-server.cjs"
 TIMEOUT /T 2 >nul
 start "FRONTEND" cmd /k "npm run dev"
 
+
+
+
+
 echo.
 echo =============================================
 echo  La aplicación TradingFácil se está iniciando.

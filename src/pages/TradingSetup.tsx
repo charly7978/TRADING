@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { realTradingAPI } from '../services/realTradingAPI';
-import { useRealTradingContext } from '../context/RealTradingContext';
+import { useActiveTradingContext } from '../context/useActiveTradingContext';
 import WalletConnect from '../components/WalletConnect';
 import {
   Key,
@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 const TradingSetup = () => {
-  const { connectToAPIs, isConnected } = useRealTradingContext();
+  const { connectToAPIs, isConnected } = useActiveTradingContext();
   
   // Inicializar credenciales desde localStorage si existen
   const [credentials, setCredentials] = useState(() => {
@@ -84,25 +84,23 @@ const TradingSetup = () => {
     setSuccess(false);
     try {
       const result = await connectToAPIs(credentials);
-      if (result && result.success) {
+      // Demo: result === true | Real: { success, error? }
+      if (result === true || (typeof result === 'object' && result.success)) {
         setSuccess(true);
         localStorage.setItem('tradingCredentials', JSON.stringify(credentials));
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 1200);
-      } else {
-        // Mensaje detallado según el error recibido
-        if (result && result.error) {
-          if (result.error.toLowerCase().includes('network') || result.error.toLowerCase().includes('fetch')) {
-            setConnectionError('No se pudo conectar al servidor local. Asegúrate de haber ejecutado el archivo "iniciar-todo.bat" y que el proxy esté activo.');
-          } else if (result.error.toLowerCase().includes('api key') || result.error.toLowerCase().includes('clave')) {
-            setConnectionError('Tus claves API parecen incorrectas o no tienen permisos suficientes. Revisa que sean correctas y tengan permisos de trading.');
-          } else {
-            setConnectionError('Error conectando con las APIs: ' + result.error);
-          }
+      } else if (typeof result === 'object' && result.error) {
+        if (result.error.toLowerCase().includes('network') || result.error.toLowerCase().includes('fetch')) {
+          setConnectionError('No se pudo conectar al servidor local. Asegúrate de haber ejecutado el archivo "iniciar-todo.bat" y que el proxy esté activo.');
+        } else if (result.error.toLowerCase().includes('api key') || result.error.toLowerCase().includes('clave')) {
+          setConnectionError('Tus claves API parecen incorrectas o no tienen permisos suficientes. Revisa que sean correctas y tengan permisos de trading.');
         } else {
-          setConnectionError('Error conectando con las APIs. Verifica tus claves y conexión a internet.');
+          setConnectionError('Error conectando con las APIs: ' + result.error);
         }
+      } else {
+        setConnectionError('Error conectando con las APIs. Verifica tus claves y conexión a internet.');
       }
     } catch (e) {
       setConnectionError('Error inesperado de conexión. Revisa tu internet y que el proxy esté activo.');

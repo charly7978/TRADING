@@ -10,13 +10,15 @@ import {
   Shield,
   DollarSign,
   Brain,
-  Key
+  Key,
+  Play,
+  Pause
 } from 'lucide-react';
-import { useTradingContext } from '../context/TradingContext';
+import { useRealTradingContext } from '../context/RealTradingContext';
 
 const Navigation = () => {
   const location = useLocation();
-  const { isConnected } = useTradingContext();
+  const { isConnected, isAutoTradingActive, setIsAutoTradingActive } = useRealTradingContext();
 
   const navItems = [
     { path: '/dashboard', label: 'Inicio', icon: Home },
@@ -80,6 +82,16 @@ const Navigation = () => {
               </Link>
             )}
             
+            {isConnected && (
+              <button
+                onClick={() => setIsAutoTradingActive(!isAutoTradingActive)}
+                className={`flex items-center space-x-2 px-3 py-1 rounded-full transition-colors ${isAutoTradingActive ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                {isAutoTradingActive ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                <span className="text-sm font-medium">{isAutoTradingActive ? 'Auto-Trading Activo' : 'Auto-Trading Pausado'}</span>
+              </button>
+            )}
+
             <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${
               isConnected ? 'bg-green-100' : 'bg-red-100'
             }`}>

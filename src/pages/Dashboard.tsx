@@ -1,12 +1,10 @@
-import React from 'react';
-import { useTradingContext } from '../context/TradingContext';
+import { useRealTradingContext } from '../context/RealTradingContext';
 import {
   TrendingUp,
   TrendingDown,
   DollarSign,
   Bot,
   Shield,
-  AlertCircle,
   CheckCircle,
   Clock,
   Target
@@ -18,21 +16,13 @@ const Dashboard = () => {
     portfolio, 
     isAutoTradingActive, 
     setIsAutoTradingActive, 
-    aiRecommendations,
     trades,
-    marketStatus
-  } = useTradingContext();
+    marketStatus,
+    aiRecommendations,
+  } = useRealTradingContext();
 
-  // Datos de rendimiento simulados
-  const performanceData = [
-    { day: 'Lun', value: 1000 },
-    { day: 'Mar', value: 1050 },
-    { day: 'Mié', value: 1120 },
-    { day: 'Jue', value: 1080 },
-    { day: 'Vie', value: 1180 },
-    { day: 'Sáb', value: 1220 },
-    { day: 'Dom', value: 1250 }
-  ];
+  // Usar datos reales del portfolio
+  const performanceData = portfolio.performance && portfolio.performance.length > 0 ? portfolio.performance : [];
 
   const StatCard = ({ 
     title, 
@@ -45,7 +35,7 @@ const Dashboard = () => {
     title: string;
     value: string;
     change?: string;
-    icon: any;
+    icon: React.ElementType;
     positive?: boolean;
     subtitle?: string;
   }) => (
@@ -161,31 +151,35 @@ const Dashboard = () => {
               <h3 className="text-xl font-bold text-gray-900">Tu Progreso Esta Semana</h3>
               <div className="flex items-center space-x-2 text-green-600">
                 <TrendingUp className="h-4 w-4" />
-                <span className="text-sm font-medium">+25%</span>
+                <span className="text-sm font-medium">{performanceData.length > 1 ? ((performanceData[performanceData.length-1].value - performanceData[0].value) / performanceData[0].value * 100).toFixed(1) + '%' : '--'}</span>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={performanceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="day" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#3b82f6" 
-                  strokeWidth={3}
-                  dot={{ fill: '#3b82f6', strokeWidth: 2, r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {performanceData.length > 1 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={performanceData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="day" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center text-gray-400 py-12">No hay datos disponibles para mostrar el gráfico.</div>
+            )}
           </div>
 
           {/* Recomendaciones de IA */}
@@ -197,7 +191,7 @@ const Dashboard = () => {
               <h3 className="text-xl font-bold text-gray-900">Consejos de Hoy</h3>
             </div>
             <div className="space-y-4">
-              {aiRecommendations.map((recommendation, index) => (
+              {aiRecommendations.map((recommendation: string, index: number) => (
                 <div key={index} className="p-4 bg-blue-50 rounded-xl border border-blue-100">
                   <div className="flex items-start space-x-3">
                     <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />

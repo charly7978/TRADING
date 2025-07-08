@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTradingContext } from '../context/TradingContext';
+import { useRealTradingContext } from '../context/RealTradingContext';
 import {
   Bot,
   TrendingUp,
@@ -9,22 +9,20 @@ import {
   Pause,
   Shield,
   Target,
-  DollarSign,
-  Clock,
-  CheckCircle,
   AlertTriangle
 } from 'lucide-react';
 
 const AutoTrading = () => {
-  const { 
-    isAutoTradingActive, 
-    setIsAutoTradingActive, 
-    riskLevel, 
+  const {
+    isAutoTradingActive,
+    setIsAutoTradingActive,
+    riskLevel,
     setRiskLevel,
     monthlyBudget,
     setMonthlyBudget,
-    assets 
-  } = useTradingContext();
+    assets,
+    isConnected
+  } = useRealTradingContext();
 
   const [showSettings, setShowSettings] = useState(false);
 
@@ -55,32 +53,27 @@ const AutoTrading = () => {
     }
   ];
 
-  const strategies = [
-    {
-      name: 'Análisis Técnico Avanzado',
-      description: 'Usa indicadores como RSI, MACD y Bollinger Bands',
-      active: true,
-      performance: '+12.5%'
-    },
-    {
-      name: 'Inteligencia Artificial',
-      description: 'Redes neuronales que aprenden del mercado',
-      active: true,
-      performance: '+18.3%'
-    },
-    {
-      name: 'Análisis de Sentimiento',
-      description: 'Analiza noticias y redes sociales',
-      active: riskLevel !== 'CONSERVADOR',
-      performance: '+8.7%'
-    },
-    {
-      name: 'Arbitraje Automático',
-      description: 'Aprovecha diferencias de precio entre mercados',
-      active: true,
-      performance: '+5.2%'
-    }
-  ];
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen p-6 flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Conexión Requerida
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Necesitas conectar tus APIs de trading para configurar el trading automático.
+          </p>
+          <button
+            onClick={() => window.location.href = '/trading-setup'}
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+          >
+            Conectar APIs
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-6 space-y-6">
@@ -223,30 +216,30 @@ const AutoTrading = () => {
         {/* Estrategias Activas */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
           <h3 className="text-xl font-bold text-gray-900 mb-6">Estrategias de IA Activas</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {strategies.map((strategy, index) => (
-              <div key={index} className={`p-4 rounded-xl border ${
-                strategy.active ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
-              }`}>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-bold text-gray-900">{strategy.name}</h4>
-                  <div className={`flex items-center space-x-2 ${
-                    strategy.active ? 'text-green-600' : 'text-gray-400'
-                  }`}>
-                    {strategy.active ? <CheckCircle className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
-                    <span className="text-sm font-medium">
-                      {strategy.active ? 'Activa' : 'Inactiva'}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-gray-600 text-sm mb-3">{strategy.description}</p>
+          {assets.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl border border-blue-200 bg-blue-50">
+                <h4 className="font-bold text-gray-900 mb-2">Análisis Técnico Inteligente</h4>
+                <p className="text-gray-600 text-sm mb-3">La IA utiliza RSI, MACD y Bandas de Bollinger para identificar oportunidades.</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Rendimiento:</span>
-                  <span className="text-green-600 font-bold">{strategy.performance}</span>
+                  <span className="text-sm text-gray-500">Estado:</span>
+                  <span className="text-green-600 font-bold">Activa</span>
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="p-4 rounded-xl border border-purple-200 bg-purple-50">
+                <h4 className="font-bold text-gray-900 mb-2">Detección de Patrones Avanzada</h4>
+                <p className="text-gray-600 text-sm mb-3">Identifica patrones de precios complejos para predecir movimientos.</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Estado:</span>
+                  <span className="text-green-600 font-bold">Activa</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-400">
+              No hay datos de activos para mostrar las estrategias activas. Conecta tus APIs.
+            </div>
+          )}
         </div>
 
         {/* Oportunidades del Día */}

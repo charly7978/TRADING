@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useTradingContext } from '../context/TradingContext';
+import { useRealTradingContext } from '../context/RealTradingContext';
 import {
   Brain,
-  TrendingUp,
-  TrendingDown,
-  Target,
   Shield,
-  DollarSign,
-  Clock,
   CheckCircle,
   AlertTriangle,
   Loader,
@@ -22,8 +17,8 @@ const AIRecommendations = () => {
     isConnected,
     isLoadingRecommendations,
     isExecutingTrade,
-    accountBalance
-  } = useTradingContext();
+    accountBalance,
+  } = useRealTradingContext();
 
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [selectedRecommendation, setSelectedRecommendation] = useState<any>(null);

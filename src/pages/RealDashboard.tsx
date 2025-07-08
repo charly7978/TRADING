@@ -6,12 +6,11 @@ import {
   DollarSign,
   Bot,
   Shield,
-  AlertCircle,
-  CheckCircle,
   Clock,
   Target,
   Activity,
-  Zap
+  Zap,
+  AlertTriangle
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -26,19 +25,10 @@ const RealDashboard = () => {
     accountBalance,
     portfolioMetrics,
     refreshMarketData,
-    getAIRecommendations
   } = useRealTradingContext();
 
   // Datos de rendimiento para el gráfico
-  const performanceData = portfolio.performance.length > 0 ? portfolio.performance : [
-    { day: 'Lun', value: portfolio.totalValue * 0.95 },
-    { day: 'Mar', value: portfolio.totalValue * 0.97 },
-    { day: 'Mié', value: portfolio.totalValue * 1.02 },
-    { day: 'Jue', value: portfolio.totalValue * 0.99 },
-    { day: 'Vie', value: portfolio.totalValue * 1.05 },
-    { day: 'Sáb', value: portfolio.totalValue * 1.03 },
-    { day: 'Dom', value: portfolio.totalValue }
-  ];
+  const performanceData = portfolio.performance && portfolio.performance.length > 0 ? portfolio.performance : [];
 
   useEffect(() => {
     if (isConnected) {
@@ -259,32 +249,36 @@ const RealDashboard = () => {
               <div className="flex items-center space-x-2 text-green-600">
                 <TrendingUp className="h-4 w-4" />
                 <span className="text-sm font-medium">
-                  {portfolio.totalPnL >= 0 ? '+' : ''}{((portfolio.totalPnL / (portfolio.totalValue - portfolio.totalPnL)) * 100).toFixed(1)}%
+                  {performanceData.length > 1 ? ((performanceData[performanceData.length-1].value - performanceData[0].value) / performanceData[0].value * 100).toFixed(1) + '%' : '--'}
                 </span>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={performanceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="day" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#3b82f6" 
-                  strokeWidth={3}
-                  dot={{ fill: '#3b82f6', strokeWidth: 2, r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {performanceData.length > 1 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={performanceData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="day" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center text-gray-400 py-12">No hay datos disponibles para mostrar el gráfico.</div>
+            )}
           </div>
 
           {/* Métricas avanzadas */}

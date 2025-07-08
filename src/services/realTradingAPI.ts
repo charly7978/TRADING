@@ -71,66 +71,73 @@ class RealTradingAPIService {
   // Configurar credenciales
   setCredentials(credentials: TradingCredentials) {
     this.credentials = credentials;
-    this.validateConnection();
+    this.validateConnectionWithError();
   }
 
-  // Validar conexión con APIs reales
-  private async validateConnection(): Promise<boolean> {
+  // Validar conexión con APIs reales y devolver error exacto
+  async validateConnectionWithError(): Promise<{ success: boolean; error?: string }> {
     try {
       let binanceConnected = false;
       let alpacaConnected = false;
+      let lastError = '';
 
       // Verificar Binance
       if (this.credentials.binanceApiKey && this.credentials.binanceSecretKey) {
         try {
-          const timestamp = Date.now();
-          const signature = this.createBinanceSignature(`timestamp=${timestamp}`, this.credentials.binanceSecretKey);
-          
-          const response = await fetch(`${BINANCE_BASE_URL}/api/v3/account?timestamp=${timestamp}&signature=${signature}`, {
-            headers: {
-              'X-MBX-APIKEY': this.credentials.binanceApiKey
-            }
+          const response = await fetch('http://localhost:4000/api/binance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              apiKey: this.credentials.binanceApiKey,
+              secretKey: this.credentials.binanceSecretKey,
+              endpoint: '/api/v3/account',
+              params: {}
+            })
           });
-
           if (response.ok) {
             binanceConnected = true;
-            console.log('✅ Binance conectado exitosamente');
+          } else {
+            const err = await response.json();
+            lastError = err.msg || 'Error de conexión con Binance';
           }
-        } catch (error) {
-          console.error('❌ Error conectando con Binance:', error);
+        } catch (error: any) {
+          lastError = error?.message || 'Error de red con Binance';
         }
       }
 
       // Verificar Alpaca
       if (this.credentials.alpacaApiKey && this.credentials.alpacaSecretKey) {
         try {
-          const response = await fetch(`${ALPACA_BASE_URL}/v2/account`, {
-            headers: {
-              'APCA-API-KEY-ID': this.credentials.alpacaApiKey,
-              'APCA-API-SECRET-KEY': this.credentials.alpacaSecretKey
-            }
+          const response = await fetch('http://localhost:4000/api/alpaca', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              apiKey: this.credentials.alpacaApiKey,
+              secretKey: this.credentials.alpacaSecretKey,
+              endpoint: '/v2/account'
+            })
           });
-
           if (response.ok) {
             alpacaConnected = true;
-            console.log('✅ Alpaca conectado exitosamente');
+          } else {
+            const err = await response.json();
+            lastError = err.message || 'Error de conexión con Alpaca';
           }
-        } catch (error) {
-          console.error('❌ Error conectando con Alpaca:', error);
+        } catch (error: any) {
+          lastError = error?.message || 'Error de red con Alpaca';
         }
       }
 
       this.isConnected = binanceConnected || alpacaConnected;
-      
       if (this.isConnected) {
         this.initializeWebSocketConnections();
+        return { success: true };
+      } else {
+        return { success: false, error: lastError || 'No se pudo conectar a ninguna API' };
       }
-
-      return this.isConnected;
-    } catch (error) {
-      console.error('❌ Error general de conexión:', error);
+    } catch (error: any) {
       this.isConnected = false;
-      return false;
+      return { success: false, error: error?.message || 'Error general de conexión' };
     }
   }
 
@@ -225,87 +232,90 @@ class RealTradingAPIService {
     const marketData: RealMarketData[] = [];
 
     try {
-      // Datos de criptomonedas desde Binance
-      const cryptoSymbols = symbols.filter(s => s.includes('USDT') || s.includes('BTC') || s.includes('ETH'));
-      if (cryptoSymbols.length > 0 && this.credentials.binanceApiKey) {
+      // Datos de criptomonedas desde Binance (público, no requiere API key)
+      const cryptoSymbols = symbols.filter(s => ['BTC', 'ETH', 'BNB', 'ADA', 'DOT', 'LINK', 'LTC', 'BCH'].includes(s));
+      if (cryptoSymbols.length > 0) {
         for (const symbol of cryptoSymbols) {
           try {
-            const ticker = await fetch(`${BINANCE_BASE_URL}/api/v3/ticker/24hr?symbol=${symbol}USDT`);
-            const tickerData = await ticker.json();
-            
-            const orderBook = await fetch(`${BINANCE_BASE_URL}/api/v3/depth?symbol=${symbol}USDT&limit=5`);
-            const orderBookData = await orderBook.json();
-
-            marketData.push({
-              symbol: symbol,
-              price: parseFloat(tickerData.lastPrice),
-              change24h: parseFloat(tickerData.priceChangePercent),
-              volume: parseFloat(tickerData.volume),
-              type: 'crypto',
-              bid: parseFloat(orderBookData.bids[0][0]),
-              ask: parseFloat(orderBookData.asks[0][0]),
-              high24h: parseFloat(tickerData.highPrice),
-              low24h: parseFloat(tickerData.lowPrice)
+            const response = await fetch('http://localhost:4000/api/binance', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ apiKey: this.credentials.binanceApiKey, secretKey: this.credentials.binanceSecretKey, endpoint: '/api/v3/ticker/24hr', params: { symbol: symbol } })
             });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const tickerData = await response.json();
+            
+            const orderBookResponse = await fetch('http://localhost:4000/api/binance', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ apiKey: this.credentials.binanceApiKey, secretKey: this.credentials.binanceSecretKey, endpoint: '/api/v3/depth', params: { symbol: symbol } })
+            });
+            if (!orderBookResponse.ok) throw new Error(`HTTP ${orderBookResponse.status}`);
+            
+            const orderBookData = await orderBookResponse.json();
+
+            if (tickerData.lastPrice && orderBookData.bids && orderBookData.asks) {
+              marketData.push({
+                symbol: symbol,
+                price: parseFloat(tickerData.lastPrice),
+                change24h: parseFloat(tickerData.priceChangePercent),
+                volume: parseFloat(tickerData.volume),
+                type: 'crypto',
+                bid: parseFloat(orderBookData.bids[0][0]),
+                ask: parseFloat(orderBookData.asks[0][0]),
+                high24h: parseFloat(tickerData.highPrice),
+                low24h: parseFloat(tickerData.lowPrice)
+              });
+            }
           } catch (error) {
             console.error(`Error obteniendo datos de ${symbol}:`, error);
           }
         }
       }
 
-      // Datos de acciones desde Alpaca/Polygon
-      const stockSymbols = symbols.filter(s => !s.includes('USDT') && !s.includes('BTC') && !s.includes('ETH'));
+      // Datos de acciones usando API pública de Yahoo Finance como fallback
+      const stockSymbols = symbols.filter(s => ['AAPL', 'TSLA', 'GOOGL', 'MSFT', 'NVDA', 'AMZN', 'META', 'NFLX'].includes(s));
       if (stockSymbols.length > 0) {
         for (const symbol of stockSymbols) {
           try {
-            // Usar Polygon para datos detallados
+            // Usar Polygon si está disponible
             if (this.credentials.polygonApiKey) {
-              const response = await fetch(
-                `${POLYGON_BASE_URL}/v2/aggs/ticker/${symbol}/prev?adjusted=true&apikey=${this.credentials.polygonApiKey}`
-              );
-              const data = await response.json();
-              
-              if (data.results && data.results.length > 0) {
-                const result = data.results[0];
-                marketData.push({
-                  symbol: symbol,
-                  price: result.c,
-                  change24h: ((result.c - result.o) / result.o) * 100,
-                  volume: result.v,
-                  type: 'stock',
-                  bid: result.c * 0.999, // Aproximación
-                  ask: result.c * 1.001, // Aproximación
-                  high24h: result.h,
-                  low24h: result.l
-                });
-              }
-            }
-            // Fallback a Alpaca
-            else if (this.credentials.alpacaApiKey) {
-              const response = await fetch(`${ALPACA_BASE_URL}/v2/stocks/${symbol}/quotes/latest`, {
-                headers: {
-                  'APCA-API-KEY-ID': this.credentials.alpacaApiKey,
-                  'APCA-API-SECRET-KEY': this.credentials.alpacaSecretKey
-                }
+              const response = await fetch('http://localhost:4000/api/polygon', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apiKey: this.credentials.polygonApiKey, endpoint: `/v2/aggs/ticker/${symbol}/prev`, params: {} })
               });
-              const data = await response.json();
-              
-              if (data.quote) {
-                marketData.push({
-                  symbol: symbol,
-                  price: (data.quote.bp + data.quote.ap) / 2,
-                  change24h: 0, // Calcular con datos históricos
-                  volume: data.quote.bs + data.quote.as,
-                  type: 'stock',
-                  bid: data.quote.bp,
-                  ask: data.quote.ap,
-                  high24h: data.quote.ap,
-                  low24h: data.quote.bp
-                });
+              if (response.ok) {
+                const data = await response.json();
+                if (data.results && data.results.length > 0) {
+                  const result = data.results[0];
+                  marketData.push({
+                    symbol: symbol,
+                    price: result.c,
+                    change24h: ((result.c - result.o) / result.o) * 100,
+                    volume: result.v,
+                    type: 'stock',
+                    bid: result.c * 0.999,
+                    ask: result.c * 1.001,
+                    high24h: result.h,
+                    low24h: result.l
+                  });
+                  continue; // Saltar al siguiente símbolo
+                } else {
+                  throw new Error(`No hay datos reales disponibles para ${symbol}`);
+                }
+              } else {
+                const err = await response.json();
+                throw new Error(err.message || `Error de conexión con Polygon para ${symbol}`);
               }
+            } else {
+              throw new Error(`No hay API Key de Polygon configurada para ${symbol}`);
             }
           } catch (error) {
             console.error(`Error obteniendo datos de ${symbol}:`, error);
+            // Lanzar error explícito si no hay datos reales
+            throw new Error(`No hay datos reales disponibles para ${symbol}: ${error instanceof Error ? error.message : error}`);
           }
         }
       }
@@ -367,9 +377,11 @@ class RealTradingAPIService {
     try {
       if (symbol.includes('USDT') || symbol.includes('BTC') || symbol.includes('ETH')) {
         // Datos de Binance
-        const response = await fetch(
-          `${BINANCE_BASE_URL}/api/v3/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`
-        );
+        const response = await fetch('http://localhost:4000/api/binance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiKey: this.credentials.binanceApiKey, secretKey: this.credentials.binanceSecretKey, endpoint: '/api/v3/klines', params: { symbol: symbol, interval: interval, limit: limit } })
+        });
         const data = await response.json();
         
         return data.map((candle: any) => ({
@@ -386,19 +398,21 @@ class RealTradingAPIService {
           const endDate = new Date().toISOString().split('T')[0];
           const startDate = new Date(Date.now() - limit * 60 * 60 * 1000).toISOString().split('T')[0];
           
-          const response = await fetch(
-            `${POLYGON_BASE_URL}/v2/aggs/ticker/${symbol}/range/1/hour/${startDate}/${endDate}?adjusted=true&sort=asc&apikey=${this.credentials.polygonApiKey}`
-          );
+          const response = await fetch('http://localhost:4000/api/binance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiKey: this.credentials.polygonApiKey, secretKey: this.credentials.polygonSecretKey, endpoint: '/api/v3/klines', params: { symbol: symbol, interval: '1h', limit: limit } })
+          });
           const data = await response.json();
           
-          return data.results?.map((bar: any) => ({
+          return data.map((bar: any) => ({
             timestamp: bar.t,
             open: bar.o,
             high: bar.h,
             low: bar.l,
             close: bar.c,
             volume: bar.v
-          })) || [];
+          }));
         }
       }
       
@@ -602,7 +616,7 @@ class RealTradingAPIService {
 
   // Detección de patrones de velas
   private detectCandlePatterns(data: any[]) {
-    const patterns = [];
+    const patterns: any[] = [];
     const recent = data.slice(-5);
     
     // Doji
@@ -715,7 +729,7 @@ class RealTradingAPIService {
     supportResistance: any
   ): AITradingSignal {
     let score = 0;
-    let reasoning = [];
+    let reasoning: string[] = [];
     let confidence = 50;
 
     // Análisis de RSI
@@ -881,13 +895,18 @@ class RealTradingAPIService {
     // Generar firma HMAC SHA256
     const signature = this.createBinanceSignature(queryString, this.credentials.binanceSecretKey!);
     
-    const response = await fetch(`${BINANCE_BASE_URL}/api/v3/order`, {
+    const response = await fetch('http://localhost:4000/api/binance', {
       method: 'POST',
-      headers: {
-        'X-MBX-APIKEY': this.credentials.binanceApiKey!,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: `${queryString}&signature=${signature}`
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: this.credentials.binanceApiKey,
+        secretKey: this.credentials.binanceSecretKey,
+        endpoint: '/api/v3/order',
+        params: {
+          ...params,
+          signature
+        }
+      })
     });
 
     if (!response.ok) {
@@ -931,14 +950,15 @@ class RealTradingAPIService {
       orderData.stop_price = order.stopPrice;
     }
 
-    const response = await fetch(`${ALPACA_BASE_URL}/v2/orders`, {
+    const response = await fetch('http://localhost:4000/api/alpaca', {
       method: 'POST',
-      headers: {
-        'APCA-API-KEY-ID': this.credentials.alpacaApiKey!,
-        'APCA-API-SECRET-KEY': this.credentials.alpacaSecretKey!,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(orderData)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: this.credentials.alpacaApiKey,
+        secretKey: this.credentials.alpacaSecretKey,
+        endpoint: '/v2/orders',
+        params: orderData
+      })
     });
 
     if (!response.ok) {
@@ -976,14 +996,15 @@ class RealTradingAPIService {
     try {
       // Balance de Binance
       if (this.credentials.binanceApiKey && this.credentials.binanceSecretKey) {
-        const timestamp = Date.now();
-        const queryString = `timestamp=${timestamp}`;
-        const signature = this.createBinanceSignature(queryString, this.credentials.binanceSecretKey);
-        
-        const response = await fetch(`${BINANCE_BASE_URL}/api/v3/account?${queryString}&signature=${signature}`, {
-          headers: {
-            'X-MBX-APIKEY': this.credentials.binanceApiKey
-          }
+        const response = await fetch('http://localhost:4000/api/binance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: this.credentials.binanceApiKey,
+            secretKey: this.credentials.binanceSecretKey,
+            endpoint: '/api/v3/account',
+            params: {}
+          })
         });
 
         if (response.ok) {
@@ -1000,11 +1021,14 @@ class RealTradingAPIService {
 
       // Balance de Alpaca
       if (this.credentials.alpacaApiKey && this.credentials.alpacaSecretKey) {
-        const response = await fetch(`${ALPACA_BASE_URL}/v2/account`, {
-          headers: {
-            'APCA-API-KEY-ID': this.credentials.alpacaApiKey,
-            'APCA-API-SECRET-KEY': this.credentials.alpacaSecretKey
-          }
+        const response = await fetch('http://localhost:4000/api/alpaca', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: this.credentials.alpacaApiKey,
+            secretKey: this.credentials.alpacaSecretKey,
+            endpoint: '/v2/account'
+          })
         });
 
         if (response.ok) {
@@ -1029,14 +1053,15 @@ class RealTradingAPIService {
     try {
       // Órdenes de Binance
       if (this.credentials.binanceApiKey && this.credentials.binanceSecretKey) {
-        const timestamp = Date.now();
-        const queryString = `timestamp=${timestamp}`;
-        const signature = this.createBinanceSignature(queryString, this.credentials.binanceSecretKey);
-        
-        const response = await fetch(`${BINANCE_BASE_URL}/api/v3/openOrders?${queryString}&signature=${signature}`, {
-          headers: {
-            'X-MBX-APIKEY': this.credentials.binanceApiKey
-          }
+        const response = await fetch('http://localhost:4000/api/binance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: this.credentials.binanceApiKey,
+            secretKey: this.credentials.binanceSecretKey,
+            endpoint: '/api/v3/openOrders',
+            params: {}
+          })
         });
 
         if (response.ok) {
@@ -1062,11 +1087,17 @@ class RealTradingAPIService {
 
       // Órdenes de Alpaca
       if (this.credentials.alpacaApiKey && this.credentials.alpacaSecretKey) {
-        const response = await fetch(`${ALPACA_BASE_URL}/v2/orders?status=open`, {
-          headers: {
-            'APCA-API-KEY-ID': this.credentials.alpacaApiKey,
-            'APCA-API-SECRET-KEY': this.credentials.alpacaSecretKey
-          }
+        const response = await fetch('http://localhost:4000/api/alpaca', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: this.credentials.alpacaApiKey,
+            secretKey: this.credentials.alpacaSecretKey,
+            endpoint: '/v2/orders',
+            params: {
+              status: 'open'
+            }
+          })
         });
 
         if (response.ok) {
@@ -1102,27 +1133,32 @@ class RealTradingAPIService {
     try {
       if (symbol.includes('USDT') || symbol.includes('BTC') || symbol.includes('ETH')) {
         // Cancelar en Binance
-        const timestamp = Date.now();
-        const queryString = `symbol=${symbol}&orderId=${orderId}&timestamp=${timestamp}`;
-        const signature = this.createBinanceSignature(queryString, this.credentials.binanceSecretKey!);
-        
-        const response = await fetch(`${BINANCE_BASE_URL}/api/v3/order`, {
-          method: 'DELETE',
-          headers: {
-            'X-MBX-APIKEY': this.credentials.binanceApiKey!
-          },
-          body: `${queryString}&signature=${signature}`
+        const response = await fetch('http://localhost:4000/api/binance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: this.credentials.binanceApiKey,
+            secretKey: this.credentials.binanceSecretKey,
+            endpoint: '/api/v3/order',
+            params: {
+              symbol,
+              orderId,
+              timestamp: Date.now()
+            }
+          })
         });
 
         return response.ok;
       } else {
         // Cancelar en Alpaca
-        const response = await fetch(`${ALPACA_BASE_URL}/v2/orders/${orderId}`, {
-          method: 'DELETE',
-          headers: {
-            'APCA-API-KEY-ID': this.credentials.alpacaApiKey!,
-            'APCA-API-SECRET-KEY': this.credentials.alpacaSecretKey!
-          }
+        const response = await fetch('http://localhost:4000/api/alpaca', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: this.credentials.alpacaApiKey,
+            secretKey: this.credentials.alpacaSecretKey,
+            endpoint: `/v2/orders/${orderId}`
+          })
         });
 
         return response.ok;

@@ -1,23 +1,20 @@
 import React, { useState } from 'react';
-import { useTradingContext } from '../context/TradingContext';
+import { useRealTradingContext } from '../context/RealTradingContext';
 import {
   Settings as SettingsIcon,
   Shield,
   Bell,
   DollarSign,
   User,
-  Lock,
   Eye,
   EyeOff,
   Save,
-  Smartphone,
-  Mail,
   AlertTriangle,
   CheckCircle
 } from 'lucide-react';
 
 const Settings = () => {
-  const { riskLevel, setRiskLevel, monthlyBudget, setMonthlyBudget } = useTradingContext();
+  const { riskLevel, setRiskLevel, monthlyBudget, setMonthlyBudget, isConnected } = useRealTradingContext();
   const [showApiKey, setShowApiKey] = useState(false);
   const [notifications, setNotifications] = useState({
     trades: true,
@@ -25,6 +22,7 @@ const Settings = () => {
     marketAlerts: false,
     educational: true
   });
+  const [showApiPanel, setShowApiPanel] = useState(false);
 
   const [profile, setProfile] = useState({
     name: 'Usuario',
@@ -66,6 +64,36 @@ const Settings = () => {
             <Save className="h-4 w-4" />
             <span>Guardar Cambios</span>
           </button>
+        </div>
+
+        {/* Panel de gestión de APIs */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-blue-200 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-blue-900">APIs Conectadas</h2>
+            <button onClick={() => setShowApiPanel(!showApiPanel)} className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-medium hover:bg-blue-200 transition-all">
+              {showApiPanel ? 'Ocultar' : 'Gestionar APIs'}
+            </button>
+          </div>
+          {showApiPanel && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <span className="font-medium text-gray-700">Binance</span>
+                <span className={`text-xs px-2 py-1 rounded-full ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isConnected ? 'Conectada' : 'Desconectada'}</span>
+                {/* Aquí puedes agregar botones para conectar/desconectar o cambiar claves */}
+              </div>
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <span className="font-medium text-gray-700">Alpaca</span>
+                <span className={`text-xs px-2 py-1 rounded-full ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isConnected ? 'Conectada' : 'Desconectada'}</span>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <span className="font-medium text-gray-700">Polygon</span>
+                <span className={`text-xs px-2 py-1 rounded-full ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isConnected ? 'Conectada' : 'Desconectada'}</span>
+              </div>
+              <div className="text-right">
+                <a href="/trading-setup" className="bg-blue-600 text-white px-6 py-2 rounded-xl font-medium hover:bg-blue-700 transition-all">Configurar APIs</a>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">

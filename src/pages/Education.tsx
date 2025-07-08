@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   GraduationCap,
   Play,
@@ -8,14 +8,11 @@ import {
   DollarSign,
   Brain,
   Target,
-  CheckCircle,
   Clock,
   Star
 } from 'lucide-react';
 
 const Education = () => {
-  const [selectedCourse, setSelectedCourse] = useState(null);
-
   const courses = [
     {
       id: 1,
@@ -265,8 +262,8 @@ const Education = () => {
               <p className="text-gray-500 text-sm">Sesiones en directo con expertos</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-xl opacity-75">
-              <h4 className="font-bold text-gray-700 mb-2">Simulador de Trading</h4>
-              <p className="text-gray-500 text-sm">Practica sin riesgo real</p>
+              <h4 className="font-bold text-gray-700 mb-2">Paper Trading</h4>
+              <p className="text-gray-500 text-sm">Practica con dinero virtual</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-xl opacity-75">
               <h4 className="font-bold text-gray-700 mb-2">Comunidad</h4>

@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRealTradingContext } from '../context/RealTradingContext';
 import WalletConnect from '../components/WalletConnect';
 import {
   Key,
-  Shield,
   CheckCircle,
   AlertTriangle,
   Eye,
   EyeOff,
-  ArrowRight,
   Loader,
   ExternalLink
 } from 'lucide-react';

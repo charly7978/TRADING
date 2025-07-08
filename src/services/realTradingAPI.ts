@@ -1,9 +1,27 @@
 import CryptoJS from 'crypto-js';
 
 // Servicio de trading real con APIs conectadas
-const BINANCE_BASE_URL = 'https://api.binance.com';
-const ALPACA_BASE_URL = 'https://paper-api.alpaca.markets'; // Cambiar a 'https://api.alpaca.markets' para trading real
-const POLYGON_BASE_URL = 'https://api.polygon.io';
+
+// ...existing code...
+// Limpieza: eliminar variables no usadas y warnings
+
+// --- Paper Trading State (Simulación Inteligente) ---
+let paperTradingState: {
+  balance: { [key: string]: number },
+  orders: RealOrderResponse[],
+  history: RealOrderResponse[],
+  enabled: boolean
+} = {
+  balance: { USDT: 10000 },
+  orders: [],
+  history: [],
+  enabled: false
+};
+
+export interface BybitCredentials {
+  bybitApiKey?: string;
+  bybitSecretKey?: string;
+}
 
 export interface TradingCredentials {
   binanceApiKey?: string;
@@ -11,6 +29,8 @@ export interface TradingCredentials {
   alpacaApiKey?: string;
   alpacaSecretKey?: string;
   polygonApiKey?: string;
+  bybitApiKey?: string;
+  bybitSecretKey?: string;
 }
 
 export interface RealMarketData {
@@ -67,11 +87,24 @@ class RealTradingAPIService {
   private credentials: TradingCredentials = {};
   private isConnected = false;
   private wsConnections: { [key: string]: WebSocket } = {};
+  private paperTrading = paperTradingState;
 
   // Configurar credenciales
   setCredentials(credentials: TradingCredentials) {
     this.credentials = credentials;
     this.validateConnectionWithError();
+  }
+
+  // Activar/desactivar paper trading
+  setPaperTradingEnabled(enabled: boolean) {
+    this.paperTrading.enabled = enabled;
+    if (enabled && Object.keys(this.paperTrading.balance).length === 0) {
+      this.paperTrading.balance = { USDT: 10000 };
+    }
+  }
+
+  isPaperTradingEnabled() {
+    return this.paperTrading.enabled;
   }
 
   // Validar conexión con APIs reales y devolver error exacto
@@ -80,6 +113,7 @@ class RealTradingAPIService {
       let binanceConnected = false;
       let alpacaConnected = false;
       let lastError = '';
+      let bybitConnected = false;
 
       // Verificar Binance
       if (this.credentials.binanceApiKey && this.credentials.binanceSecretKey) {
@@ -128,7 +162,31 @@ class RealTradingAPIService {
         }
       }
 
-      this.isConnected = binanceConnected || alpacaConnected;
+      // Verificar Bybit
+      if (this.credentials.bybitApiKey && this.credentials.bybitSecretKey) {
+        try {
+          const response = await fetch('https://trading-0ycz.onrender.com/api/bybit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              apiKey: this.credentials.bybitApiKey,
+              secretKey: this.credentials.bybitSecretKey,
+              endpoint: '/v5/account/wallet-balance',
+              params: { accountType: 'UNIFIED' }
+            })
+          });
+          if (response.ok) {
+            bybitConnected = true;
+          } else {
+            const err = await response.json();
+            lastError = err.retMsg || 'Error de conexión con Bybit';
+          }
+        } catch (error: any) {
+          lastError = error?.message || 'Error de red con Bybit';
+        }
+      }
+
+      this.isConnected = binanceConnected || alpacaConnected || bybitConnected;
       if (this.isConnected) {
         this.initializeWebSocketConnections();
         return { success: true };
@@ -146,11 +204,9 @@ class RealTradingAPIService {
     // WebSocket de Binance para precios en tiempo real
     if (this.credentials.binanceApiKey) {
       const binanceWs = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr');
-      
       binanceWs.onopen = () => {
         console.log('🔗 WebSocket Binance conectado');
       };
-
       binanceWs.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -159,28 +215,22 @@ class RealTradingAPIService {
           console.error('Error procesando datos de Binance:', error);
         }
       };
-
       binanceWs.onerror = (error) => {
         console.error('Error WebSocket Binance:', error);
       };
-
       this.wsConnections['binance'] = binanceWs;
     }
-
     // WebSocket de Alpaca para datos de acciones
     if (this.credentials.alpacaApiKey) {
       const alpacaWs = new WebSocket('wss://stream.data.alpaca.markets/v2/iex');
-      
       alpacaWs.onopen = () => {
         console.log('🔗 WebSocket Alpaca conectado');
-        // Autenticar
         alpacaWs.send(JSON.stringify({
           action: 'auth',
           key: this.credentials.alpacaApiKey,
           secret: this.credentials.alpacaSecretKey
         }));
       };
-
       alpacaWs.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -189,8 +239,23 @@ class RealTradingAPIService {
           console.error('Error procesando datos de Alpaca:', error);
         }
       };
-
       this.wsConnections['alpaca'] = alpacaWs;
+    }
+    // WebSocket de Bybit (solo para datos públicos, no requiere API key)
+    if (this.credentials.bybitApiKey) {
+      const bybitWs = new WebSocket('wss://stream.bybit.com/v5/public/spot');
+      bybitWs.onopen = () => {
+        console.log('🔗 WebSocket Bybit conectado');
+        // Suscribirse a tickers principales
+        bybitWs.send(JSON.stringify({
+          op: 'subscribe',
+          args: ['tickers.BTCUSDT', 'tickers.ETHUSDT']
+        }));
+      };
+      bybitWs.onmessage = () => {
+        // Procesar datos de Bybit si es necesario
+      };
+      this.wsConnections['bybit'] = bybitWs;
     }
   }
 
@@ -395,13 +460,12 @@ class RealTradingAPIService {
       } else {
         // Datos de Polygon para acciones
         if (this.credentials.polygonApiKey) {
-          const endDate = new Date().toISOString().split('T')[0];
-          const startDate = new Date(Date.now() - limit * 60 * 60 * 1000).toISOString().split('T')[0];
+          // ...existing code...
           
           const response = await fetch('https://trading-0ycz.onrender.com/api/binance', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ apiKey: this.credentials.polygonApiKey, secretKey: this.credentials.polygonSecretKey, endpoint: '/api/v3/klines', params: { symbol: symbol, interval: '1h', limit: limit } })
+            body: JSON.stringify({ apiKey: this.credentials.polygonApiKey, endpoint: '/api/v3/klines', params: { symbol: symbol, interval: '1h', limit: limit } })
           });
           const data = await response.json();
           
@@ -853,6 +917,15 @@ class RealTradingAPIService {
   // Ejecutar orden real
   async executeRealOrder(order: RealOrderRequest): Promise<RealOrderResponse | null> {
     try {
+      // Si está activado el modo simulación inteligente
+      if (this.paperTrading.enabled) {
+        return this.executePaperOrder(order);
+      }
+      // Bybit
+      if (order.symbol.endsWith('USDT') && this.credentials.bybitApiKey && this.credentials.bybitSecretKey) {
+        return await this.executeBybitOrder(order);
+      }
+      // Binance
       if (order.symbol.includes('USDT') || order.symbol.includes('BTC') || order.symbol.includes('ETH')) {
         return await this.executeBinanceOrder(order);
       } else {
@@ -862,6 +935,90 @@ class RealTradingAPIService {
       console.error('❌ Error ejecutando orden real:', error);
       return null;
     }
+  }
+
+  // --- Paper Trading (Simulación Inteligente) ---
+  private executePaperOrder(order: RealOrderRequest): RealOrderResponse {
+    // Simula ejecución instantánea, sin slippage ni comisiones
+    const symbol = order.symbol;
+    const price = order.price || 100; // Simula precio
+    const side = order.side;
+    const qty = order.quantity;
+    const now = new Date();
+    // Actualiza balance
+    if (side === 'BUY') {
+      const cost = price * qty;
+      if ((this.paperTrading.balance['USDT'] || 0) < cost) throw new Error('Fondos insuficientes en simulación');
+      this.paperTrading.balance['USDT'] -= cost;
+      this.paperTrading.balance[symbol] = (this.paperTrading.balance[symbol] || 0) + qty;
+    } else {
+      if ((this.paperTrading.balance[symbol] || 0) < qty) throw new Error('No tienes suficiente para vender en simulación');
+      this.paperTrading.balance[symbol] -= qty;
+      this.paperTrading.balance['USDT'] += price * qty;
+    }
+    const response: RealOrderResponse = {
+      orderId: 'paper-' + Math.random().toString(36).substring(2, 10),
+      clientOrderId: 'paper-' + Math.random().toString(36).substring(2, 10),
+      symbol,
+      side,
+      quantity: qty,
+      price,
+      status: 'FILLED',
+      timestamp: now,
+      executedQty: qty,
+      cummulativeQuoteQty: price * qty,
+      commission: 0,
+      commissionAsset: 'USDT'
+    };
+    this.paperTrading.orders.push(response);
+    this.paperTrading.history.push(response);
+    return response;
+  }
+
+  // --- Bybit Integration ---
+  private async executeBybitOrder(order: RealOrderRequest): Promise<RealOrderResponse> {
+    // Solo soporta spot market orders para simplificar
+    const params: any = {
+      category: 'spot',
+      symbol: order.symbol,
+      side: order.side.toUpperCase(),
+      orderType: order.type === 'MARKET' ? 'Market' : 'Limit',
+      qty: order.quantity.toString(),
+    };
+    if (order.type === 'LIMIT' && order.price) {
+      params.price = order.price.toString();
+    }
+    // Bybit requiere firma, el proxy la realiza
+    const response = await fetch('https://trading-0ycz.onrender.com/api/bybit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: this.credentials.bybitApiKey,
+        secretKey: this.credentials.bybitSecretKey,
+        endpoint: '/v5/order/create',
+        params
+      })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Bybit API Error: ${error.retMsg}`);
+    }
+    const data = await response.json();
+    const result = data.result?.orderId ? data.result : data;
+    return {
+      orderId: result.orderId,
+      clientOrderId: result.orderLinkId || result.orderId,
+      symbol: order.symbol,
+      side: order.side,
+      quantity: parseFloat(order.quantity.toString()),
+      price: parseFloat(result.price || order.price || '0'),
+      status: 'FILLED',
+      timestamp: new Date(),
+      executedQty: parseFloat(order.quantity.toString()),
+      cummulativeQuoteQty: parseFloat(result.price || order.price || '0') * parseFloat(order.quantity.toString()),
+      commission: 0,
+      commissionAsset: 'USDT'
+    };
   }
 
   // Ejecutar orden en Binance
@@ -991,8 +1148,11 @@ class RealTradingAPIService {
 
   // Obtener balance real de la cuenta
   async getRealAccountBalance(): Promise<{ [key: string]: number }> {
+    // Si está en modo simulación, retorna el balance simulado
+    if (this.paperTrading.enabled) {
+      return { ...this.paperTrading.balance };
+    }
     const balances: { [key: string]: number } = {};
-
     try {
       // Balance de Binance
       if (this.credentials.binanceApiKey && this.credentials.binanceSecretKey) {
@@ -1006,7 +1166,6 @@ class RealTradingAPIService {
             params: {}
           })
         });
-
         if (response.ok) {
           const data = await response.json();
           data.balances.forEach((balance: any) => {
@@ -1018,7 +1177,6 @@ class RealTradingAPIService {
           });
         }
       }
-
       // Balance de Alpaca
       if (this.credentials.alpacaApiKey && this.credentials.alpacaSecretKey) {
         const response = await fetch('https://trading-0ycz.onrender.com/api/alpaca', {
@@ -1030,7 +1188,6 @@ class RealTradingAPIService {
             endpoint: '/v2/account'
           })
         });
-
         if (response.ok) {
           const data = await response.json();
           balances['USD'] = parseFloat(data.cash);
@@ -1038,7 +1195,27 @@ class RealTradingAPIService {
           balances['BUYING_POWER'] = parseFloat(data.buying_power);
         }
       }
-
+      // Balance de Bybit
+      if (this.credentials.bybitApiKey && this.credentials.bybitSecretKey) {
+        const response = await fetch('https://trading-0ycz.onrender.com/api/bybit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: this.credentials.bybitApiKey,
+            secretKey: this.credentials.bybitSecretKey,
+            endpoint: '/v5/account/wallet-balance',
+            params: { accountType: 'UNIFIED' }
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const coins = data.result?.list?.[0]?.coin || [];
+          coins.forEach((coin: any) => {
+            const total = parseFloat(coin.walletBalance);
+            if (total > 0) balances[coin.coin] = total;
+          });
+        }
+      }
       return balances;
     } catch (error) {
       console.error('❌ Error obteniendo balance real:', error);
@@ -1048,8 +1225,11 @@ class RealTradingAPIService {
 
   // Obtener órdenes activas
   async getActiveOrders(): Promise<RealOrderResponse[]> {
+    // Si está en modo simulación, retorna las órdenes simuladas abiertas
+    if (this.paperTrading.enabled) {
+      return [...this.paperTrading.orders];
+    }
     const orders: RealOrderResponse[] = [];
-
     try {
       // Órdenes de Binance
       if (this.credentials.binanceApiKey && this.credentials.binanceSecretKey) {
@@ -1063,7 +1243,6 @@ class RealTradingAPIService {
             params: {}
           })
         });
-
         if (response.ok) {
           const data = await response.json();
           data.forEach((order: any) => {
@@ -1084,7 +1263,6 @@ class RealTradingAPIService {
           });
         }
       }
-
       // Órdenes de Alpaca
       if (this.credentials.alpacaApiKey && this.credentials.alpacaSecretKey) {
         const response = await fetch('https://trading-0ycz.onrender.com/api/alpaca', {
@@ -1099,7 +1277,6 @@ class RealTradingAPIService {
             }
           })
         });
-
         if (response.ok) {
           const data = await response.json();
           data.forEach((order: any) => {
@@ -1120,7 +1297,39 @@ class RealTradingAPIService {
           });
         }
       }
-
+      // Órdenes de Bybit
+      if (this.credentials.bybitApiKey && this.credentials.bybitSecretKey) {
+        const response = await fetch('https://trading-0ycz.onrender.com/api/bybit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: this.credentials.bybitApiKey,
+            secretKey: this.credentials.bybitSecretKey,
+            endpoint: '/v5/order/realtime',
+            params: { category: 'spot' }
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const list = data.result?.list || [];
+          list.forEach((order: any) => {
+            orders.push({
+              orderId: order.orderId,
+              clientOrderId: order.orderLinkId || order.orderId,
+              symbol: order.symbol,
+              side: order.side,
+              quantity: parseFloat(order.qty),
+              price: parseFloat(order.price),
+              status: order.orderStatus,
+              timestamp: new Date(order.createdTime),
+              executedQty: parseFloat(order.cumExecQty),
+              cummulativeQuoteQty: parseFloat(order.cumExecValue),
+              commission: 0,
+              commissionAsset: 'USDT'
+            });
+          });
+        }
+      }
       return orders;
     } catch (error) {
       console.error('❌ Error obteniendo órdenes activas:', error);
@@ -1131,8 +1340,27 @@ class RealTradingAPIService {
   // Cancelar orden
   async cancelOrder(orderId: string, symbol: string): Promise<boolean> {
     try {
+      // Si está en modo simulación, elimina la orden simulada
+      if (this.paperTrading.enabled) {
+        this.paperTrading.orders = this.paperTrading.orders.filter(o => o.orderId !== orderId);
+        return true;
+      }
+      // Bybit
+      if (symbol.endsWith('USDT') && this.credentials.bybitApiKey && this.credentials.bybitSecretKey) {
+        const response = await fetch('https://trading-0ycz.onrender.com/api/bybit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: this.credentials.bybitApiKey,
+            secretKey: this.credentials.bybitSecretKey,
+            endpoint: '/v5/order/cancel',
+            params: { category: 'spot', orderId }
+          })
+        });
+        return response.ok;
+      }
+      // Binance
       if (symbol.includes('USDT') || symbol.includes('BTC') || symbol.includes('ETH')) {
-        // Cancelar en Binance
         const response = await fetch('https://trading-0ycz.onrender.com/api/binance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1147,10 +1375,9 @@ class RealTradingAPIService {
             }
           })
         });
-
         return response.ok;
       } else {
-        // Cancelar en Alpaca
+        // Alpaca
         const response = await fetch('https://trading-0ycz.onrender.com/api/alpaca', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1160,7 +1387,6 @@ class RealTradingAPIService {
             endpoint: `/v2/orders/${orderId}`
           })
         });
-
         return response.ok;
       }
     } catch (error) {

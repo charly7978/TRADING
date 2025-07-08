@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { realTradingAPI } from '../services/realTradingAPI';
 import { useRealTradingContext } from '../context/RealTradingContext';
 import WalletConnect from '../components/WalletConnect';
 import {
@@ -48,6 +49,16 @@ const TradingSetup = () => {
   const [connectionError, setConnectionError] = useState('');
   const [success, setSuccess] = useState(false);
   const [connectedWallet, setConnectedWallet] = useState<string>('');
+  // Estado para modo simulación
+  const [paperMode, setPaperMode] = useState(() => {
+    const stored = localStorage.getItem('paperTradingEnabled');
+    return stored === 'true';
+  });
+  // Sincronizar modo simulación con servicio y localStorage
+  useEffect(() => {
+    realTradingAPI.setPaperTradingEnabled(paperMode);
+    localStorage.setItem('paperTradingEnabled', paperMode ? 'true' : 'false');
+  }, [paperMode]);
 
   // Automatización máxima: conectar siempre que haya credenciales válidas, tanto al montar como al cambiar
   useEffect(() => {
@@ -164,6 +175,62 @@ const TradingSetup = () => {
             <p className="text-gray-600">Configura tus cuentas de trading real para comenzar a operar</p>
           </div>
 
+          {/* Switch de modo simulación inteligente */}
+          <div className="flex items-center justify-center mb-6">
+            <span className="mr-3 text-sm font-medium text-gray-700">Modo Simulación Inteligente</span>
+            <button
+              type="button"
+              className={`w-14 h-7 flex items-center rounded-full p-1 duration-300 ease-in-out ${paperMode ? 'bg-green-500' : 'bg-gray-300'}`}
+              onClick={() => setPaperMode(v => !v)}
+              aria-pressed={paperMode}
+            >
+              <span
+                className={`bg-white w-6 h-6 rounded-full shadow-md transform duration-300 ease-in-out ${paperMode ? 'translate-x-7' : ''}`}
+              />
+            </button>
+            <span className="ml-3 text-xs text-gray-500">(Paper Trading)</span>
+          </div>
+
+          {/* Ayuda Bybit */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-bold text-gray-900">Bybit (Criptomonedas, alternativa fácil)</h3>
+              <button
+                type="button"
+                onClick={() => window.open('https://www.bybit.com/app/user/api-management', '_blank')}
+                className="flex items-center space-x-1 text-blue-600 text-sm hover:text-blue-700"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span>Crear API Key</span>
+              </button>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
+              <p className="text-sm text-purple-800">
+                <strong>Recomendado para principiantes:</strong> Bybit permite crear una cuenta y API Key en minutos, sin verificación KYC obligatoria para operar con criptomonedas.<br/>
+                <b>Paso 1:</b> Regístrate en Bybit.<br/>
+                <b>Paso 2:</b> Ve a "API Management" y crea una nueva API Key.<br/>
+                <b>Paso 3:</b> Elige "Trade" y <b>NO</b> habilites retiros.<br/>
+                <b>Paso 4:</b> Copia tu API Key y Secret Key aquí abajo.
+              </p>
+            </div>
+            <input
+              type="text"
+              value={credentials.bybitApiKey || ''}
+              onChange={e => setCredentials((prev: typeof credentials) => ({ ...prev, bybitApiKey: e.target.value }))}
+              placeholder="Bybit API Key"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-2"
+              autoComplete="off"
+            />
+            <input
+              type="password"
+              value={credentials.bybitSecretKey || ''}
+              onChange={e => setCredentials((prev: typeof credentials) => ({ ...prev, bybitSecretKey: e.target.value }))}
+              placeholder="Bybit Secret Key"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+              autoComplete="off"
+            />
+          </div>
+
           {/* Wallet Connect */}
           <div className="mb-8">
             <WalletConnect
@@ -196,6 +263,7 @@ const TradingSetup = () => {
                 <li>3. Si el error persiste, revisa tu conexión a internet y vuelve a intentarlo.</li>
                 <li>4. Si usas Binance, asegúrate de que la API Key tenga permisos de "Spot Trading" y <b>NO</b> de retiro.</li>
                 <li>5. Si usas Alpaca, comienza con "Paper Trading" para evitar bloqueos.</li>
+                <li>6. Si usas Bybit, sigue los pasos de la sección morada para obtener tu API Key.</li>
               </ul>
             </div>
           )}
@@ -320,7 +388,7 @@ const TradingSetup = () => {
           </div>
 
           <div className="mt-8 text-center text-gray-500 text-sm">
-            Solo necesitas una API de Binance o Alpaca para comenzar. Tus claves se guardan de forma segura y nunca se comparten.
+            Solo necesitas una API de Binance, Bybit o Alpaca para comenzar. Tus claves se guardan de forma segura y nunca se comparten.
           </div>
         </div>
       </div>

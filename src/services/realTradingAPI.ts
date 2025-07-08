@@ -84,7 +84,7 @@ class RealTradingAPIService {
       // Verificar Binance
       if (this.credentials.binanceApiKey && this.credentials.binanceSecretKey) {
         try {
-          const response = await fetch('http://localhost:4000/api/binance', {
+          const response = await fetch('https://trading-0ycz.onrender.com/api/binance', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -108,7 +108,7 @@ class RealTradingAPIService {
       // Verificar Alpaca
       if (this.credentials.alpacaApiKey && this.credentials.alpacaSecretKey) {
         try {
-          const response = await fetch('http://localhost:4000/api/alpaca', {
+          const response = await fetch('https://trading-0ycz.onrender.com/api/alpaca', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -237,7 +237,7 @@ class RealTradingAPIService {
       if (cryptoSymbols.length > 0) {
         for (const symbol of cryptoSymbols) {
           try {
-            const response = await fetch('http://localhost:4000/api/binance', {
+            const response = await fetch('https://trading-0ycz.onrender.com/api/binance', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ apiKey: this.credentials.binanceApiKey, secretKey: this.credentials.binanceSecretKey, endpoint: '/api/v3/ticker/24hr', params: { symbol: symbol } })
@@ -246,7 +246,7 @@ class RealTradingAPIService {
             
             const tickerData = await response.json();
             
-            const orderBookResponse = await fetch('http://localhost:4000/api/binance', {
+            const orderBookResponse = await fetch('https://trading-0ycz.onrender.com/api/binance', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ apiKey: this.credentials.binanceApiKey, secretKey: this.credentials.binanceSecretKey, endpoint: '/api/v3/depth', params: { symbol: symbol } })
@@ -281,7 +281,7 @@ class RealTradingAPIService {
           try {
             // Usar Polygon si está disponible
             if (this.credentials.polygonApiKey) {
-              const response = await fetch('http://localhost:4000/api/polygon', {
+              const response = await fetch('https://trading-0ycz.onrender.com/api/polygon', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ apiKey: this.credentials.polygonApiKey, endpoint: `/v2/aggs/ticker/${symbol}/prev`, params: {} })
@@ -377,7 +377,7 @@ class RealTradingAPIService {
     try {
       if (symbol.includes('USDT') || symbol.includes('BTC') || symbol.includes('ETH')) {
         // Datos de Binance
-        const response = await fetch('http://localhost:4000/api/binance', {
+        const response = await fetch('https://trading-0ycz.onrender.com/api/binance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ apiKey: this.credentials.binanceApiKey, secretKey: this.credentials.binanceSecretKey, endpoint: '/api/v3/klines', params: { symbol: symbol, interval: interval, limit: limit } })
@@ -398,7 +398,7 @@ class RealTradingAPIService {
           const endDate = new Date().toISOString().split('T')[0];
           const startDate = new Date(Date.now() - limit * 60 * 60 * 1000).toISOString().split('T')[0];
           
-          const response = await fetch('http://localhost:4000/api/binance', {
+          const response = await fetch('https://trading-0ycz.onrender.com/api/binance', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ apiKey: this.credentials.polygonApiKey, secretKey: this.credentials.polygonSecretKey, endpoint: '/api/v3/klines', params: { symbol: symbol, interval: '1h', limit: limit } })
@@ -895,7 +895,7 @@ class RealTradingAPIService {
     // Generar firma HMAC SHA256
     const signature = this.createBinanceSignature(queryString, this.credentials.binanceSecretKey!);
     
-    const response = await fetch('http://localhost:4000/api/binance', {
+    const response = await fetch('https://trading-0ycz.onrender.com/api/binance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -950,7 +950,7 @@ class RealTradingAPIService {
       orderData.stop_price = order.stopPrice;
     }
 
-    const response = await fetch('http://localhost:4000/api/alpaca', {
+    const response = await fetch('https://trading-0ycz.onrender.com/api/alpaca', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -996,7 +996,7 @@ class RealTradingAPIService {
     try {
       // Balance de Binance
       if (this.credentials.binanceApiKey && this.credentials.binanceSecretKey) {
-        const response = await fetch('http://localhost:4000/api/binance', {
+        const response = await fetch('https://trading-0ycz.onrender.com/api/binance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1021,7 +1021,7 @@ class RealTradingAPIService {
 
       // Balance de Alpaca
       if (this.credentials.alpacaApiKey && this.credentials.alpacaSecretKey) {
-        const response = await fetch('http://localhost:4000/api/alpaca', {
+        const response = await fetch('https://trading-0ycz.onrender.com/api/alpaca', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1053,7 +1053,7 @@ class RealTradingAPIService {
     try {
       // Órdenes de Binance
       if (this.credentials.binanceApiKey && this.credentials.binanceSecretKey) {
-        const response = await fetch('http://localhost:4000/api/binance', {
+        const response = await fetch('https://trading-0ycz.onrender.com/api/binance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1087,7 +1087,7 @@ class RealTradingAPIService {
 
       // Órdenes de Alpaca
       if (this.credentials.alpacaApiKey && this.credentials.alpacaSecretKey) {
-        const response = await fetch('http://localhost:4000/api/alpaca', {
+        const response = await fetch('https://trading-0ycz.onrender.com/api/alpaca', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1133,7 +1133,7 @@ class RealTradingAPIService {
     try {
       if (symbol.includes('USDT') || symbol.includes('BTC') || symbol.includes('ETH')) {
         // Cancelar en Binance
-        const response = await fetch('http://localhost:4000/api/binance', {
+        const response = await fetch('https://trading-0ycz.onrender.com/api/binance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1151,7 +1151,7 @@ class RealTradingAPIService {
         return response.ok;
       } else {
         // Cancelar en Alpaca
-        const response = await fetch('http://localhost:4000/api/alpaca', {
+        const response = await fetch('https://trading-0ycz.onrender.com/api/alpaca', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

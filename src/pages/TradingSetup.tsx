@@ -1,35 +1,15 @@
-import { useState, useEffect } from 'react';
-import { realTradingAPI } from '../services/realTradingAPI';
-import { useActiveTradingContext } from '../context/useActiveTradingContext';
-import WalletConnect from '../components/WalletConnect';
-import {
-  Key,
-  CheckCircle,
-  AlertTriangle,
-  Eye,
-  EyeOff,
-  Loader,
-  ExternalLink
-} from 'lucide-react';
+
+import { useRealTradingContext } from '../context/RealTradingContext';
 
 const TradingSetup = () => {
-  const { connectToAPIs, isConnected } = useActiveTradingContext();
-  
+  const { connectToAPIs, isConnected } = useRealTradingContext();
   // Inicializar credenciales desde localStorage si existen
   const [credentials, setCredentials] = useState(() => {
     const stored = localStorage.getItem('tradingCredentials');
     if (stored) {
       try {
         return JSON.parse(stored);
-      } catch {
-        return {
-          binanceApiKey: '',
-          binanceSecretKey: '',
-          alpacaApiKey: '',
-          alpacaSecretKey: '',
-          polygonApiKey: ''
-        };
-      }
+      } catch {}
     }
     return {
       binanceApiKey: '',
@@ -39,44 +19,18 @@ const TradingSetup = () => {
       polygonApiKey: ''
     };
   });
-
   const [showSecrets, setShowSecrets] = useState({
     binanceSecret: false,
     alpacaSecret: false
   });
-
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState('');
   const [success, setSuccess] = useState(false);
   const [connectedWallet, setConnectedWallet] = useState<string>('');
-  // Estado para modo simulación
-  const [paperMode, setPaperMode] = useState(() => {
-    const stored = localStorage.getItem('paperTradingEnabled');
-    return stored === 'true';
-  });
-  // Sincronizar modo simulación con servicio y localStorage
-  useEffect(() => {
-    realTradingAPI.setPaperTradingEnabled(paperMode);
-    localStorage.setItem('paperTradingEnabled', paperMode ? 'true' : 'false');
-  }, [paperMode]);
 
-  // Automatización máxima: conectar siempre que haya credenciales válidas, tanto al montar como al cambiar
-
-  useEffect(() => {
-    setConnectionError('');
-    setSuccess(false);
-    const hasBinance = credentials.binanceApiKey && credentials.binanceSecretKey;
-    const hasAlpaca = credentials.alpacaApiKey && credentials.alpacaSecretKey;
-    // Si hay claves, conectar automáticamente
-    if (hasBinance || hasAlpaca) {
-      handleConnect();
-    }
-    // Si está en modo simulado y no hay claves, permitir conectar demo
-    if (paperMode && !hasBinance && !hasAlpaca) {
-      handleConnect();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [credentials.binanceApiKey, credentials.binanceSecretKey, credentials.alpacaApiKey, credentials.alpacaSecretKey, paperMode]);
+  // Conectar automáticamente si hay claves
+  const hasBinance = credentials.binanceApiKey && credentials.binanceSecretKey;
+  const hasAlpaca = credentials.alpacaApiKey && credentials.alpacaSecretKey;
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -84,21 +38,14 @@ const TradingSetup = () => {
     setSuccess(false);
     try {
       const result = await connectToAPIs(credentials);
-      // Demo: result === true | Real: { success, error? }
-      if (result === true || (typeof result === 'object' && result.success)) {
+      if (result && result.success) {
         setSuccess(true);
         localStorage.setItem('tradingCredentials', JSON.stringify(credentials));
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 1200);
-      } else if (typeof result === 'object' && result.error) {
-        if (result.error.toLowerCase().includes('network') || result.error.toLowerCase().includes('fetch')) {
-          setConnectionError('No se pudo conectar al servidor local. Asegúrate de haber ejecutado el archivo "iniciar-todo.bat" y que el proxy esté activo.');
-        } else if (result.error.toLowerCase().includes('api key') || result.error.toLowerCase().includes('clave')) {
-          setConnectionError('Tus claves API parecen incorrectas o no tienen permisos suficientes. Revisa que sean correctas y tengan permisos de trading.');
-        } else {
-          setConnectionError('Error conectando con las APIs: ' + result.error);
-        }
+      } else if (result && result.error) {
+        setConnectionError(result.error);
       } else {
         setConnectionError('Error conectando con las APIs. Verifica tus claves y conexión a internet.');
       }
@@ -115,9 +62,36 @@ const TradingSetup = () => {
 
   if (isConnected && success) {
     return (
-      <div className="min-h-screen p-6 bg-gradient-to-br from-green-50 to-blue-50">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-green-200">
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-white p-8 rounded-2xl shadow-xl text-center">
+          <h2 className="text-2xl font-bold mb-4">¡Conexión exitosa!</h2>
+          <p className="mb-4">Tus APIs están conectadas y listas para operar en modo real.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen p-6 bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+      {/* Aquí va el formulario de conexión real, sin simulación */}
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+        <h2 className="text-xl font-bold mb-4">Conecta tus APIs de trading real</h2>
+        {/* ...campos de formulario para credenciales... */}
+        {/* Botón para conectar */}
+        <button
+          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+          onClick={handleConnect}
+          disabled={isConnecting}
+        >
+          {isConnecting ? 'Conectando...' : 'Conectar'}
+        </button>
+        {connectionError && <div className="text-red-600 mt-2">{connectionError}</div>}
+      </div>
+    </div>
+  );
+};
+
+export default TradingSetup;
             <div className="text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle className="h-8 w-8 text-green-600" />

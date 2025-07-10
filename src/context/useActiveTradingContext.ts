@@ -1,11 +1,3 @@
-import { useMode } from '../context/ModeContext';
-import { useTradingContext } from '../context/TradingContext';
-import { useRealTradingContext } from '../context/RealTradingContext';
 
-export function useActiveTradingContext() {
-  const { mode } = useMode();
-  if (mode === 'real') {
-    return useRealTradingContext();
-  }
-  return useTradingContext();
-}
+// Este archivo ya no es necesario. Toda la app usa solo el contexto real.
+// Si ves este archivo importado, elimina la importación y usa useRealTradingContext directamente.
